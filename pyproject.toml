@@ -1,0 +1,15 @@
+[project]
+name = "finance-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain>=1.0.8",
+    "langchain-anthropic>=1.2.0",
+    "langgraph>=1.0.3",
+    "pandas-ta>=0.4.71b0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "yfinance>=0.2.66",
+]
