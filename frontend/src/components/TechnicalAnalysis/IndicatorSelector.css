@@ -1,0 +1,154 @@
+.indicator-selector {
+  position: relative;
+  width: 100%;
+}
+
+.indicator-selector-trigger {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.indicator-selector-trigger:hover {
+  border-color: #007bff;
+}
+
+.indicator-selector-arrow {
+  color: #666;
+  font-size: 12px;
+}
+
+.indicator-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.indicator-selector-search {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.indicator-selector-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.indicator-selector-search input:focus {
+  border-color: #007bff;
+}
+
+.indicator-selector-content {
+  overflow-y: auto;
+  max-height: 450px;
+}
+
+.indicator-section {
+  padding: 8px 0;
+}
+
+.indicator-section-header {
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #666;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.indicator-category {
+  margin: 4px 0;
+}
+
+.indicator-category-name {
+  padding: 6px 16px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+  background: #fafafa;
+}
+
+.indicator-item {
+  padding: 8px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  color: #333;
+}
+
+.indicator-item:hover {
+  background-color: #e3f2fd;
+}
+
+.indicator-item.selected {
+  background-color: #007bff;
+  color: white;
+  font-weight: 500;
+}
+
+.indicator-divider {
+  height: 1px;
+  background: #ddd;
+  margin: 8px 0;
+}
+
+.indicator-no-results {
+  padding: 24px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.indicator-selector-loading {
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f8f9fa;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Scrollbar styling */
+.indicator-selector-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.indicator-selector-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.indicator-selector-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.indicator-selector-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
