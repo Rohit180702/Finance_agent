@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.request import CalculateIndicatorRequest, AnalyzeRequest
 from app.models.response import CalculateIndicatorResponse, AnalyzeResponse, ErrorResponse
 from app.services.agent_service import AgentService
-from config.market_data import validate_period_interval_combination
+from app.config.market_data import validate_period_interval_combination
 
 router = APIRouter()
 agent_service = AgentService()

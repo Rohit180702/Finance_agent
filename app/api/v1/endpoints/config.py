@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.models.response import ConfigResponse, ErrorResponse
-from config.market_data import get_config_for_frontend
+from app.config.market_data import get_config_for_frontend
 from app.services.indicator_service import get_all_indicators_from_pandas_ta
 
 router = APIRouter()
