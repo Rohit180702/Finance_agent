@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
-from models.claude import model, tools
+from app.llm.claude import model, tools
 
 def call_model(state: MessagesState):
 
