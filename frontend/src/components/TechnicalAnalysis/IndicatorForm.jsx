@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useConfig } from '../../hooks/useConfig';
 import LoadingSpinner from '../common/LoadingSpinner';
 import IndicatorSelector from './IndicatorSelector';
+import StockSelector from './StockSelector';
 import './IndicatorForm.css';
 
 const IndicatorForm = ({ onSubmit, loading }) => {
@@ -80,16 +81,11 @@ const IndicatorForm = ({ onSubmit, loading }) => {
     <form className="indicator-form" onSubmit={handleSubmit}>
       <div className="form-group">
         <label htmlFor="symbol">Stock Symbol</label>
-        <input
-          type="text"
-          id="symbol"
-          name="symbol"
+        <StockSelector
           value={formData.symbol}
-          onChange={handleChange}
-          placeholder="e.g., AAPL, TSLA, MSFT"
-          required
+          onChange={(value) => setFormData(prev => ({ ...prev, symbol: value }))}
         />
-        <small>Enter the stock ticker symbol</small>
+        <small>Choose from NIFTY 50 or search 2200+ NSE stocks</small>
       </div>
 
       <div className="form-group">
