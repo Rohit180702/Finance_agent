@@ -1,9 +1,9 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import config, technical
+from app.api.v1.endpoints import config, technical, stocks
 
 api_router = APIRouter()
 
 # Include endpoint routers
 api_router.include_router(config.router, tags=["Configuration"])
 api_router.include_router(technical.router, prefix="/technical", tags=["Technical Analysis"])
-
+api_router.include_router(stocks.router, prefix="/stocks", tags=["Stocks"])
