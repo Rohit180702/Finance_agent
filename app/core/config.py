@@ -1,5 +1,10 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -10,6 +15,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Finance Agent API"
     VERSION: str = "1.0.0"
     DESCRIPTION: str = "FastAPI backend for Finance Agent - Technical, Fundamental, and Sentiment Analysis"
+
+    # API Keys (loaded from .env)
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ALPHA_VANTAGE_API_KEY: str = os.getenv("ALPHA_VANTAGE_API_KEY", "")
 
     # CORS Settings
     BACKEND_CORS_ORIGINS: List[str] = [
@@ -25,6 +34,7 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
+        env_file = ".env"
 
 
 settings = Settings()
