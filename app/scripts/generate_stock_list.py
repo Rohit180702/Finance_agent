@@ -8,6 +8,7 @@ Usage:
 
 import pandas as pd
 import json
+import requests
 from pathlib import Path
 from datetime import datetime
 
@@ -42,7 +43,8 @@ def fetch_all_nse_stocks():
             'nse_symbol': row['SYMBOL'],                # Original NSE symbol
             'name': row['NAME OF COMPANY'],             # Company name
             'series': row['SERIES'],                    # Series (EQ, BE, etc.)
-            'isin': row['ISIN NUMBER']                  # ISIN code
+            'isin': row['ISIN NUMBER'],                 # ISIN code
+            'type': 'stock'                             # Type
         }
         stocks.append(stock)
 
@@ -77,7 +79,8 @@ def fetch_nifty50():
             'name': row['Company Name'],                # Company name
             'sector': row['Industry'],                  # Sector/Industry
             'isin': row['ISIN Code'],                   # ISIN code
-            'series': row['Series']                     # Series (EQ)
+            'series': row['Series'],                    # Series (EQ)
+            'type': 'stock'                             # Type
         }
         stocks.append(stock)
 
@@ -86,27 +89,109 @@ def fetch_nifty50():
     return stocks
 
 
-def save_to_json(all_stocks, nifty50_stocks):
+def fetch_all_nse_etfs():
     """
-    Save stocks to JSON file.
+    Fetch all NSE ETFs from NSE API.
+
+    Returns:
+        list: List of all ETF dicts
+    """
+    print("📥 Fetching all NSE ETFs...")
+
+    # NSE API requires headers
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+    }
+
+    # Fetch ETF data from NSE API
+    response = requests.get('https://www.nseindia.com/api/etf', headers=headers, timeout=10)
+    response.raise_for_status()
+
+    data = response.json()
+    etf_list = data.get('data', [])
+
+    # Convert to our format
+    etfs = []
+    for etf in etf_list:
+        symbol = etf.get('symbol', '')
+        name = etf.get('assets', '')
+
+        if symbol and name:
+            etf_dict = {
+                'symbol': f"{symbol}.NS",
+                'nse_symbol': symbol,
+                'name': name,
+                'series': etf.get('series', 'EQ'),
+                'isin': etf.get('meta', {}).get('isin', ''),
+                'type': 'etf'
+            }
+            etfs.append(etf_dict)
+
+    print(f"✅ Found {len(etfs)} ETFs")
+    return etfs
+
+
+def get_major_indices():
+    """
+    Get major NSE indices.
+
+    Returns:
+        list: List of major index dicts
+    """
+    print("📥 Adding major indices...")
+
+    # Major NSE indices (use ^ prefix for Yahoo Finance)
+    indices = [
+        {'symbol': '^NSEI', 'nse_symbol': 'NIFTY', 'name': 'NIFTY 50', 'category': 'Broad Market Index', 'type': 'index'},
+        {'symbol': '^NSEBANK', 'nse_symbol': 'BANKNIFTY', 'name': 'NIFTY Bank', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXIT', 'nse_symbol': 'CNXIT', 'name': 'NIFTY IT', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXAUTO', 'nse_symbol': 'CNXAUTO', 'name': 'NIFTY Auto', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXPHARMA', 'nse_symbol': 'CNXPHARMA', 'name': 'NIFTY Pharma', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXFMCG', 'nse_symbol': 'CNXFMCG', 'name': 'NIFTY FMCG', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXMETAL', 'nse_symbol': 'CNXMETAL', 'name': 'NIFTY Metal', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXREALTY', 'nse_symbol': 'CNXREALTY', 'name': 'NIFTY Realty', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXENERGY', 'nse_symbol': 'CNXENERGY', 'name': 'NIFTY Energy', 'category': 'Sectoral Index', 'type': 'index'},
+        {'symbol': '^CNXINFRA', 'nse_symbol': 'CNXINFRA', 'name': 'NIFTY Infrastructure', 'category': 'Thematic Index', 'type': 'index'},
+    ]
+
+    print(f"✅ Added {len(indices)} indices")
+
+    return indices
+
+
+def save_to_json(all_items, nifty50_stocks, etfs, indices):
+    """
+    Save stocks, ETFs, and indices to JSON file.
 
     Args:
-        all_stocks: List of all NSE stocks
+        all_items: List of all items (stocks + ETFs + indices)
         nifty50_stocks: List of NIFTY 50 stocks
+        etfs: List of ETFs
+        indices: List of indices
     """
     print("💾 Saving to JSON file...")
+
+    # Count by type
+    stocks_count = sum(1 for item in all_items if item.get('type') == 'stock')
+    etfs_count = len(etfs)
+    indices_count = len(indices)
 
     # Create data structure with metadata, popular, all
     data = {
         "metadata": {
             "last_updated": datetime.now().isoformat(),
-            "total_stocks": len(all_stocks),
+            "total_items": len(all_items),
+            "stocks_count": stocks_count,
+            "etfs_count": etfs_count,
+            "indices_count": indices_count,
             "nifty50_count": len(nifty50_stocks),
             "source": "NSE India",
-            "version": "1.0"
+            "version": "2.0"
         },
         "popular": nifty50_stocks,
-        "all": all_stocks
+        "all": all_items
     }
 
     # Create app/data directory if it doesn't exist
@@ -123,22 +208,30 @@ def save_to_json(all_stocks, nifty50_stocks):
 def main():
     """Main function"""
     print("=" * 80)
-    print("NSE Stock List Generator")
+    print("NSE Stock/ETF/Index List Generator")
     print("=" * 80)
     print()
 
     # Fetch data
     all_stocks = fetch_all_nse_stocks()
     nifty50_stocks = fetch_nifty50()
+    etfs = fetch_all_nse_etfs()
+    indices = get_major_indices()
+
+    # Combine all items (stocks + ETFs + indices)
+    all_items = all_stocks + etfs + indices
 
     # Save to file
-    save_to_json(all_stocks, nifty50_stocks)
+    save_to_json(all_items, nifty50_stocks, etfs, indices)
 
     # Print summary
     print()
     print("=" * 80)
     print("✅ Done!")
-    print(f"Total stocks: {len(all_stocks)}")
+    print(f"Total items: {len(all_items)}")
+    print(f"  - Stocks: {len(all_stocks)}")
+    print(f"  - ETFs: {len(etfs)}")
+    print(f"  - Indices: {len(indices)}")
     print(f"NIFTY 50: {len(nifty50_stocks)}")
     print(f"Saved to: app/data/nse_stocks.json")
     print("=" * 80)
