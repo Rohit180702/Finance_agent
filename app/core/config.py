@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     # API Keys (loaded from .env)
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     ALPHA_VANTAGE_API_KEY: str = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+
+    # LLM Configuration
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "anthropic")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "claude-sonnet-4-5-20250929")
+    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0"))
 
     # CORS Settings
     BACKEND_CORS_ORIGINS: List[str] = [
