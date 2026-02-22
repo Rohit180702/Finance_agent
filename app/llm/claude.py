@@ -1,5 +1,6 @@
 from langchain.chat_models import init_chat_model
 from app.agent.tools.technical_analysis import calculate_indicator
+from app.agent.tools.fundamental_analysis import analyze_fundamentals
 from app.core.config import settings
 import os
 
@@ -11,4 +12,7 @@ model = init_chat_model(
     temperature=0
 )
 
-tools = [calculate_indicator]
+tools = [
+    calculate_indicator,
+    analyze_fundamentals
+]

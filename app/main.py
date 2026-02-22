@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.router import api_router
+from langgraph.checkpoint.redis import RedisSaver
+from app.core.redis_client import get_redis_checkpointer_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -24,6 +29,20 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Redis indices on startup"""
+    try:
+        logger.info("Initializing Redis checkpointer indices...")
+        redis_client = get_redis_checkpointer_client()
+        checkpointer = RedisSaver(redis_client=redis_client)
+        checkpointer.setup()
+        logger.info("✅ Redis checkpointer initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Redis: {str(e)}")
+        logger.warning("Application will continue, but conversation memory may not work")
 
 
 @app.get("/", tags=["Health"])

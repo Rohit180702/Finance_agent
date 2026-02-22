@@ -1,6 +1,8 @@
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.redis import RedisSaver
 from app.llm.claude import model, tools
+from app.core.redis_client import get_redis_checkpointer_client
 
 def call_model(state: MessagesState):
 
@@ -20,4 +22,9 @@ def create_agent():
   graph.add_conditional_edges("agent", tools_condition)
   graph.add_edge("tools", "agent")
 
-  return graph.compile()
+  # Add Redis checkpointer for conversation memory
+  # Use Redis client with decode_responses=False (RedisSaver needs bytes)
+  redis_client = get_redis_checkpointer_client()
+  checkpointer = RedisSaver(redis_client=redis_client)
+
+  return graph.compile(checkpointer=checkpointer)

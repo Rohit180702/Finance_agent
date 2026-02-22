@@ -39,6 +39,16 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
 
+    # Redis Settings (for conversation memory and caching)
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")  # Empty for local development
+
+    # Session Settings
+    SESSION_TTL: int = int(os.getenv("SESSION_TTL", "86400"))  # 24 hours in seconds
+    SESSION_CLEANUP_INTERVAL: int = int(os.getenv("SESSION_CLEANUP_INTERVAL", "3600"))  # 1 hour
+
     class Config:
         case_sensitive = True
         env_file = ".env"

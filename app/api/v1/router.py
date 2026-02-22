@@ -8,3 +8,4 @@ api_router.include_router(config.router, tags=["Configuration"])
 api_router.include_router(technical.router, prefix="/technical", tags=["Technical Analysis"])
 api_router.include_router(stocks.router, prefix="/stocks", tags=["Stocks"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
+# Note: Fundamental analysis is integrated via chat endpoint using the analyze_fundamentals tool
