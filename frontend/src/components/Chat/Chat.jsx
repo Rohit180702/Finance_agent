@@ -1,128 +1,156 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useChat } from '../../hooks/useChat';
+import Button from '../ui/Button';
+import EmptyState from '../ui/EmptyState';
+import ErrorState from '../ui/ErrorState';
 import './Chat.css';
+
+const quickPrompts = [
+  'Show RSI trend for RELIANCE over 6 months',
+  'Compare MACD signals for TCS and INFY',
+  'Summarize key fundamental risks for HDFCBANK',
+];
+
+const formatTime = (iso) => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const SendIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M5 12h12M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M4 7h16M10 11v6M14 11v6M9 7l1-2h4l1 2M7 7l1 12h8l1-12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const Chat = () => {
   const { messages, loading, error, sendMessage, clearMessages } = useChat();
   const [input, setInput] = useState('');
-  const messagesEndRef = useRef(null);
+  const endRef = useRef(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+  const isEmpty = messages.length === 0;
+  const canSend = input.trim() && !loading;
 
-    await sendMessage(input);
+  const messageRows = useMemo(
+    () =>
+      messages.map((msg, index) => (
+        <article
+          key={`${msg.timestamp || index}-${index}`}
+          className={`chat-message-row ${msg.role === 'user' ? 'is-user' : 'is-assistant'}`}
+        >
+          <div className="chat-message-bubble">
+            <div className="message-content">
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
+            <time>{formatTime(msg.timestamp)}</time>
+          </div>
+        </article>
+      )),
+    [messages],
+  );
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!canSend) return;
+    const text = input;
     setInput('');
+    await sendMessage(text);
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
     }
   };
 
   return (
-    <div className="chat-container">
-      {/* Header */}
-      <div className="chat-header">
-        <h2>Finance Agent Chat</h2>
-        <button
+    <section className="chat-layout">
+      <header className="chat-titlebar">
+        <div>
+          <h3>Finance Assistant</h3>
+          <p>Ask technical, fundamental, and market-structure questions.</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={clearMessages}
-          className="clear-button"
-          disabled={messages.length === 0}
+          disabled={!messages.length}
+          className="icon-left"
         >
-          Clear Chat
-        </button>
-      </div>
+          <TrashIcon />
+          Clear
+        </Button>
+      </header>
 
-      {/* Messages Area */}
-      <div className="chat-messages">
-        {messages.length === 0 ? (
-          <div className="chat-welcome">
-            <h3>👋 Welcome to Finance Agent!</h3>
-            <p>Ask me anything about technical analysis, indicators, or stock data.</p>
-            <div className="chat-examples">
-              <p><strong>Try asking:</strong></p>
-              <ul>
-                <li>"What is RSI?"</li>
-                <li>"Calculate MACD for RELIANCE"</li>
-                <li>"Show me the Bollinger Bands for TCS"</li>
-              </ul>
-            </div>
-          </div>
+      <div className="chat-thread" role="log" aria-live="polite">
+        {isEmpty ? (
+          <EmptyState
+            title="Start a new analysis conversation"
+            description="Use the assistant to pull indicators, inspect fundamentals, and reason about setups."
+            action={
+              <div className="chat-prompt-row">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    type="button"
+                    key={prompt}
+                    className="chat-prompt-pill"
+                    onClick={() => setInput(prompt)}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            }
+          />
         ) : (
-          messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`chat-message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}
-            >
-              <div className="message-avatar">
-                {msg.role === 'user' ? '👤' : '🤖'}
-              </div>
-              <div className="message-content">
-                <div className="message-text">{msg.content}</div>
-                {msg.timestamp && (
-                  <div className="message-timestamp">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
+          <div className="chat-messages-list">{messageRows}</div>
         )}
 
-        {/* Loading indicator */}
         {loading && (
-          <div className="chat-message assistant-message">
-            <div className="message-avatar">🤖</div>
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
+          <article className="chat-message-row is-assistant">
+            <div className="chat-message-bubble chat-loading-bubble">
+              <span />
+              <span />
+              <span />
             </div>
-          </div>
+          </article>
         )}
 
-        {/* Error message */}
-        {error && (
-          <div className="chat-error">
-            ⚠️ {error}
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
+        {error && <ErrorState title="Chat request failed" message={error} />}
+        <div ref={endRef} />
       </div>
 
-      {/* Input Area */}
-      <form onSubmit={handleSubmit} className="chat-input-form">
+      <form className="chat-composer" onSubmit={handleSubmit}>
+        <label htmlFor="chat-input" className="sr-only">
+          Message
+        </label>
         <textarea
+          id="chat-input"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask me about stocks, indicators, or technical analysis..."
-          className="chat-input"
-          rows="2"
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask for an indicator read, valuation signal, or thesis check."
+          rows={2}
           disabled={loading}
         />
-        <button
-          type="submit"
-          className="chat-send-button"
-          disabled={!input.trim() || loading}
-        >
-          {loading ? '⏳' : '📤'} Send
-        </button>
+        <Button type="submit" disabled={!canSend} className="icon-left">
+          <SendIcon />
+          Send
+        </Button>
       </form>
-    </div>
+    </section>
   );
 };
 
 export default Chat;
-

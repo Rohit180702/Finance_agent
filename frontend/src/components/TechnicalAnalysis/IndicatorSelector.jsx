@@ -1,144 +1,106 @@
-import { useState, useMemo } from 'react';
-import './IndicatorSelector.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const IndicatorSelector = ({ value, onChange, indicators }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
 
-  // Get selected indicator label
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   const selectedLabel = useMemo(() => {
-    if (!value || !indicators) return 'Select indicator...';
-    
-    // Search in popular indicators
-    for (const category of Object.values(indicators.popular || {})) {
-      const found = category.find(ind => ind.value === value);
-      if (found) return found.label;
-    }
-    
-    // Search in all indicators
-    for (const category of Object.values(indicators.all || {})) {
-      const found = category.find(ind => ind.value === value);
-      if (found) return found.label;
-    }
-    
-    return value;
+    if (!value || !indicators) return 'Select indicator';
+
+    const groups = [...Object.values(indicators.popular || {}), ...Object.values(indicators.all || {})];
+    const item = groups.flat().find((entry) => entry.value === value);
+    return item?.label || value;
   }, [value, indicators]);
 
-  // Filter indicators based on search term
-  const filteredIndicators = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!indicators) return { popular: {}, all: {} };
-    if (!searchTerm) return indicators;
+    if (!search.trim()) return indicators;
 
-    const term = searchTerm.toLowerCase();
-    const filterCategory = (categoryObj) => {
-      const filtered = {};
-      for (const [catName, items] of Object.entries(categoryObj)) {
-        const matchingItems = items.filter(ind => 
-          ind.value.toLowerCase().includes(term) || 
-          ind.label.toLowerCase().includes(term)
+    const term = search.toLowerCase();
+    const filterCategory = (source = {}) => {
+      const result = {};
+      Object.entries(source).forEach(([category, items]) => {
+        const subset = items.filter(
+          (item) => item.value.toLowerCase().includes(term) || item.label.toLowerCase().includes(term),
         );
-        if (matchingItems.length > 0) {
-          filtered[catName] = matchingItems;
-        }
-      }
-      return filtered;
+        if (subset.length) result[category] = subset;
+      });
+      return result;
     };
 
     return {
-      popular: filterCategory(indicators.popular || {}),
-      all: filterCategory(indicators.all || {})
+      popular: filterCategory(indicators.popular),
+      all: filterCategory(indicators.all),
     };
-  }, [indicators, searchTerm]);
+  }, [indicators, search]);
 
-  const handleSelect = (indicatorValue) => {
-    onChange(indicatorValue);
-    setIsOpen(false);
-    setSearchTerm('');
+  const renderCategory = (title, categories) => {
+    const entries = Object.entries(categories || {});
+    if (!entries.length) return null;
+
+    return (
+      <div className="selector-group">
+        <p className="selector-section-label">{title}</p>
+        {entries.map(([category, items]) => (
+          <div key={category} className="selector-category">
+            <h4>{category}</h4>
+            <div className="selector-tag-grid">
+              {items.map((indicator) => (
+                <button
+                  type="button"
+                  key={indicator.value}
+                  className={`selector-tag ${value === indicator.value ? 'is-selected' : ''}`}
+                  onClick={() => {
+                    onChange(indicator.value);
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                >
+                  {indicator.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
-  if (!indicators) {
-    return <div className="indicator-selector-loading">Loading indicators...</div>;
-  }
-
   return (
-    <div className="indicator-selector">
-      <div 
-        className="indicator-selector-trigger"
-        onClick={() => setIsOpen(!isOpen)}
-      >
+    <div className="selector" ref={containerRef}>
+      <button type="button" className="selector-trigger" onClick={() => setOpen((prev) => !prev)}>
         <span>{selectedLabel}</span>
-        <span className="indicator-selector-arrow">{isOpen ? '▲' : '▼'}</span>
-      </div>
+        <span className={`selector-chevron ${open ? 'open' : ''}`} />
+      </button>
 
-      {isOpen && (
-        <div className="indicator-selector-dropdown">
-          <div className="indicator-selector-search">
+      {open && (
+        <div className="selector-dropdown indicator-dropdown" role="listbox">
+          <div className="selector-search-wrap">
             <input
-              type="text"
-              placeholder="🔍 Search 200+ indicators..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
+              className="selector-search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search indicators"
+              autoFocus
             />
           </div>
-
-          <div className="indicator-selector-content">
-            {/* Popular Indicators Section */}
-            {Object.keys(filteredIndicators.popular).length > 0 && (
-              <div className="indicator-section">
-                <div className="indicator-section-header">📌 POPULAR</div>
-                {Object.entries(filteredIndicators.popular).map(([category, items]) => (
-                  <div key={category} className="indicator-category">
-                    <div className="indicator-category-name">{category}</div>
-                    {items.map(indicator => (
-                      <div
-                        key={indicator.value}
-                        className={`indicator-item ${value === indicator.value ? 'selected' : ''}`}
-                        onClick={() => handleSelect(indicator.value)}
-                      >
-                        {indicator.label}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Divider */}
-            {Object.keys(filteredIndicators.popular).length > 0 && 
-             Object.keys(filteredIndicators.all).length > 0 && (
-              <div className="indicator-divider"></div>
-            )}
-
-            {/* All Indicators Section */}
-            {Object.keys(filteredIndicators.all).length > 0 && (
-              <div className="indicator-section">
-                <div className="indicator-section-header">
-                  📚 ALL INDICATORS ({Object.values(filteredIndicators.all).reduce((sum, items) => sum + items.length, 0)})
-                </div>
-                {Object.entries(filteredIndicators.all).map(([category, items]) => (
-                  <div key={category} className="indicator-category">
-                    <div className="indicator-category-name">{category} ({items.length})</div>
-                    {items.map(indicator => (
-                      <div
-                        key={indicator.value}
-                        className={`indicator-item ${value === indicator.value ? 'selected' : ''}`}
-                        onClick={() => handleSelect(indicator.value)}
-                      >
-                        {indicator.label}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* No results */}
-            {Object.keys(filteredIndicators.popular).length === 0 && 
-             Object.keys(filteredIndicators.all).length === 0 && (
-              <div className="indicator-no-results">
-                No indicators found for "{searchTerm}"
-              </div>
+          <div className="selector-list">
+            {renderCategory('Popular', filtered.popular)}
+            {renderCategory('All Indicators', filtered.all)}
+            {!Object.keys(filtered.popular || {}).length && !Object.keys(filtered.all || {}).length && (
+              <p className="selector-empty">No indicators matched your search.</p>
             )}
           </div>
         </div>
@@ -148,4 +110,3 @@ const IndicatorSelector = ({ value, onChange, indicators }) => {
 };
 
 export default IndicatorSelector;
-

@@ -1,69 +1,68 @@
-import React, { useState } from 'react';
-import Header from './components/common/Header';
+import { useState } from 'react';
+import Sidebar from './components/layout/Sidebar';
+import TopBar from './components/layout/TopBar';
 import Chat from './components/Chat/Chat';
 import IndicatorForm from './components/TechnicalAnalysis/IndicatorForm';
 import ResultCard from './components/TechnicalAnalysis/ResultCard';
+import FundamentalAnalysis from './components/FundamentalAnalysis/FundamentalAnalysis';
+import SentimentAnalysis from './components/SentimentAnalysis/SentimentAnalysis';
+import Card from './components/ui/Card';
+import ErrorState from './components/ui/ErrorState';
 import { useIndicator } from './hooks/useIndicator';
 import './App.css';
 
 function App() {
   const { calculate, loading, error, result } = useIndicator();
-  const [showError, setShowError] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'technical'
+  const [activeTab, setActiveTab] = useState('chat');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSubmit = async (formData) => {
-    try {
-      setShowError(false);
-      await calculate(formData);
-    } catch (err) {
-      setShowError(true);
-      console.error('Calculation error:', err);
-    }
+    await calculate(formData);
   };
 
   return (
-    <div className="app">
-      <Header />
+    <div className="app-shell">
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      {/* Tab Navigation */}
-      <div className="tab-navigation">
-        <button
-          className={`tab-button ${activeTab === 'chat' ? 'active' : ''}`}
-          onClick={() => setActiveTab('chat')}
-        >
-          💬 Chat
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'technical' ? 'active' : ''}`}
-          onClick={() => setActiveTab('technical')}
-        >
-          📊 Technical Analysis
-        </button>
+      <div className="app-main">
+        <TopBar activeTab={activeTab} onMenuClick={() => setSidebarOpen(true)} />
+
+        <main className="app-content">
+          {activeTab === 'chat' && <Chat />}
+
+          {activeTab === 'technical' && (
+            <section className="technical-grid">
+              <Card
+                title="Configuration"
+                subtitle="Set stock, indicator, and timeframe parameters."
+              >
+                <IndicatorForm onSubmit={handleSubmit} loading={loading} />
+              </Card>
+
+              <Card title="Result" subtitle="Indicator output, context, and calculation metadata.">
+                {error && (
+                  <ErrorState
+                    title="Calculation failed"
+                    message={error}
+                  />
+                )}
+                <ResultCard result={result} loading={loading} />
+              </Card>
+            </section>
+          )}
+
+          {activeTab === 'fundamental' && <FundamentalAnalysis />}
+
+          {activeTab === 'sentiment' && <SentimentAnalysis />}
+        </main>
       </div>
-
-      <main className="main-content">
-        {activeTab === 'chat' ? (
-          <Chat />
-        ) : (
-          <div className="container">
-            <div className="content-wrapper">
-              <IndicatorForm onSubmit={handleSubmit} loading={loading} />
-
-              {showError && error && (
-                <div className="error-message">
-                  <span className="error-icon">❌</span>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <ResultCard result={result} />
-            </div>
-          </div>
-        )}
-      </main>
     </div>
   );
 }
 
 export default App;
-

@@ -1,170 +1,149 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useConfig } from '../../hooks/useConfig';
-import LoadingSpinner from '../common/LoadingSpinner';
+import Button from '../ui/Button';
+import Select from '../ui/Select';
+import Skeleton from '../ui/Skeleton';
+import ErrorState from '../ui/ErrorState';
 import IndicatorSelector from './IndicatorSelector';
 import StockSelector from './StockSelector';
-import './IndicatorForm.css';
+
+const periodLabels = {
+  '1d': '1 Day',
+  '5d': '5 Days',
+  '1mo': '1 Month',
+  '3mo': '3 Months',
+  '6mo': '6 Months',
+  '1y': '1 Year',
+  '2y': '2 Years',
+  '5y': '5 Years',
+  '10y': '10 Years',
+  ytd: 'Year to Date',
+  max: 'Maximum',
+};
+
+const intervalLabels = {
+  '1m': '1 Minute',
+  '2m': '2 Minutes',
+  '5m': '5 Minutes',
+  '15m': '15 Minutes',
+  '30m': '30 Minutes',
+  '1h': '1 Hour',
+  '90m': '90 Minutes',
+  '1d': '1 Day',
+  '5d': '5 Days',
+  '1wk': '1 Week',
+  '1mo': '1 Month',
+  '3mo': '3 Months',
+};
 
 const IndicatorForm = ({ onSubmit, loading }) => {
-  const { config, loading: configLoading, error: configError } = useConfig();
-
+  const { config, loading: configLoading, error } = useConfig();
   const [formData, setFormData] = useState({
     symbol: '',
     indicator: '',
     data_period: '6mo',
     interval: '1d',
-    indicator_period: 14
+    indicator_period: 14,
   });
 
-  // UI labels for periods (frontend responsibility)
-  const periodLabels = {
-    '1d': '1 Day',
-    '5d': '5 Days',
-    '1mo': '1 Month',
-    '3mo': '3 Months',
-    '6mo': '6 Months',
-    '1y': '1 Year',
-    '2y': '2 Years',
-    '5y': '5 Years',
-    '10y': '10 Years',
-    'ytd': 'Year to Date',
-    'max': 'Maximum Available'
-  };
-
-  // UI labels for intervals (frontend responsibility)
-  const intervalLabels = {
-    '1m': '1 Minute',
-    '2m': '2 Minutes',
-    '5m': '5 Minutes',
-    '15m': '15 Minutes',
-    '30m': '30 Minutes',
-    '1h': '1 Hour',
-    '90m': '90 Minutes',
-    '1d': '1 Day',
-    '5d': '5 Days',
-    '1wk': '1 Week',
-    '1mo': '1 Month',
-    '3mo': '3 Months'
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'indicator_period' ? parseInt(value) : value
+      [name]: name === 'indicator_period' ? Number(value) : value,
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
+  const disabled = !formData.symbol || !formData.indicator || loading;
 
   if (configLoading) {
     return (
-      <div className="form-loading">
-        <LoadingSpinner size="large" />
-        <p>Loading configuration...</p>
+      <div className="form-loading-state">
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
       </div>
     );
   }
 
-  if (configError) {
-    return (
-      <div className="form-error">
-        <p>Error loading configuration: {configError}</p>
-      </div>
-    );
+  if (error) {
+    return <ErrorState title="Configuration unavailable" message={error} />;
   }
 
   return (
-    <form className="indicator-form" onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label htmlFor="symbol">Stock Symbol</label>
+    <form
+      className="indicator-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit(formData);
+      }}
+    >
+      <div className="ui-field">
+        <span className="ui-field-label">Stock</span>
         <StockSelector
           value={formData.symbol}
-          onChange={(value) => setFormData(prev => ({ ...prev, symbol: value }))}
+          onChange={(value) => handleChange('symbol', value)}
         />
-        <small>Choose from NIFTY 50 or search 2200+ NSE stocks</small>
+        <span className="ui-field-hint">Select from NSE stocks and indices.</span>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="indicator">Technical Indicator</label>
+      <div className="ui-field">
+        <span className="ui-field-label">Indicator</span>
         <IndicatorSelector
           value={formData.indicator}
-          onChange={(value) => setFormData(prev => ({ ...prev, indicator: value }))}
+          onChange={(value) => handleChange('indicator', value)}
           indicators={config?.indicators}
         />
-        <small>Choose from 200+ technical indicators or search</small>
+        <span className="ui-field-hint">Browse categories or search by indicator name.</span>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="data_period">Data Period (Historical Range)</label>
-        <select
+      <div className="field-grid-2">
+        <Select
           id="data_period"
-          name="data_period"
+          label="Data Period"
           value={formData.data_period}
-          onChange={handleChange}
-          required
+          onChange={(event) => handleChange('data_period', event.target.value)}
         >
-          {config?.periods?.map(period => (
+          {(config?.periods || []).map((period) => (
             <option key={period.value} value={period.value}>
               {periodLabels[period.value] || period.value}
             </option>
           ))}
-        </select>
-        <small>How much historical data to fetch</small>
+        </Select>
+
+        <Select
+          id="interval"
+          label="Interval"
+          value={formData.interval}
+          onChange={(event) => handleChange('interval', event.target.value)}
+        >
+          {(config?.intervals || []).map((interval) => (
+            <option key={interval.value} value={interval.value}>
+              {intervalLabels[interval.value] || interval.value}
+            </option>
+          ))}
+        </Select>
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="interval">Interval (Timeframe)</label>
-          <select
-            id="interval"
-            name="interval"
-            value={formData.interval}
-            onChange={handleChange}
-            required
-          >
-            {config?.intervals?.map(interval => (
-              <option key={interval.value} value={interval.value}>
-                {intervalLabels[interval.value] || interval.value}
-                {interval.limitation ? ` (${interval.limitation})` : ''}
-              </option>
-            ))}
-          </select>
-          <small>Candle size (e.g., 1m, 5m, 1d)</small>
-        </div>
+      <label className="ui-field" htmlFor="indicator_period">
+        <span className="ui-field-label">Indicator Period</span>
+        <input
+          className="ui-input"
+          id="indicator_period"
+          name="indicator_period"
+          type="number"
+          min="1"
+          max="200"
+          value={formData.indicator_period}
+          onChange={(event) => handleChange('indicator_period', event.target.value)}
+        />
+      </label>
 
-        <div className="form-group">
-          <label htmlFor="indicator_period">Indicator Period</label>
-          <input
-            type="number"
-            id="indicator_period"
-            name="indicator_period"
-            value={formData.indicator_period}
-            onChange={handleChange}
-            min="1"
-            max="200"
-            required
-          />
-          <small>Lookback period for calculation</small>
-        </div>
-      </div>
-
-      <button type="submit" className="btn btn-primary" disabled={loading}>
-        {loading ? (
-          <>
-            <LoadingSpinner size="small" />
-            <span>Calculating...</span>
-          </>
-        ) : (
-          <span>Calculate Indicator</span>
-        )}
-      </button>
+      <Button type="submit" disabled={disabled}>
+        {loading ? 'Calculating...' : 'Calculate Indicator'}
+      </Button>
     </form>
   );
 };
 
 export default IndicatorForm;
-

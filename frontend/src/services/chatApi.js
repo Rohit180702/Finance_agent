@@ -21,13 +21,22 @@ chatApi.interceptors.response.use(
 );
 
 /**
- * Send a chat message with conversation history
+ * Send a chat message with session-based conversation memory
  */
-export const sendChatMessage = async (message, history = []) => {
+export const sendChatMessage = async (message, sessionId = null) => {
   const response = await chatApi.post('/chat/message', {
     message,
-    history,
-    session_id: null, // For future session management
+    session_id: sessionId, // Redis handles conversation history
+  });
+  return response.data;
+};
+
+/**
+ * Get conversation history for a session
+ */
+export const getChatHistory = async (sessionId) => {
+  const response = await chatApi.get('/chat/history', {
+    params: { session_id: sessionId },
   });
   return response.data;
 };

@@ -1,32 +1,39 @@
-import { useState, useMemo, useEffect } from 'react';
-import './StockSelector.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const StockSelector = ({ value, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [stocks, setStocks] = useState({ popular: [], all: [] });
   const [loading, setLoading] = useState(true);
+  const containerRef = useRef(null);
 
-  // Load stocks on mount
   useEffect(() => {
     const loadStocks = async () => {
       try {
         setLoading(true);
-        
-        // Fetch popular stocks (NIFTY 50)
-        const popularResponse = await fetch('http://localhost:8000/api/v1/stocks/popular');
-        const popularData = await popularResponse.json();
-        
-        // Fetch all stocks
-        const allResponse = await fetch('http://localhost:8000/api/v1/stocks/all');
-        const allData = await allResponse.json();
-        
-        setStocks({
-          popular: popularData.stocks || [],
-          all: allData.stocks || []
+        const [popularRes, allRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/stocks/popular`),
+          fetch(`${API_BASE_URL}/stocks/all`),
+        ]);
+
+        const popular = await popularRes.json();
+        const all = await allRes.json();
+
+        console.log('📊 Stocks loaded:', {
+          popularCount: popular.stocks?.length || 0,
+          allCount: all.stocks?.length || 0,
+          popularSample: popular.stocks?.[0],
+          allSample: all.stocks?.[0],
         });
-      } catch (error) {
-        console.error('Error loading stocks:', error);
+
+        setStocks({
+          popular: popular.stocks || [],
+          all: all.stocks || [],
+        });
+      } catch (err) {
+        console.error('❌ Failed to load stocks:', err);
       } finally {
         setLoading(false);
       }
@@ -35,120 +42,123 @@ const StockSelector = ({ value, onChange }) => {
     loadStocks();
   }, []);
 
-  // Get selected stock label
-  const selectedLabel = useMemo(() => {
-    if (!value) return 'Select stock...';
-    
-    // Search in all stocks
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const selectedStock = useMemo(() => {
     const allStocks = [...stocks.popular, ...stocks.all];
-    const found = allStocks.find(stock => 
-      stock.symbol === value || stock.nse_symbol === value
-    );
-    
-    if (found) {
-      return `${found.nse_symbol} - ${found.name}`;
-    }
-    
-    return value;
-  }, [value, stocks]);
+    return allStocks.find((item) => item.symbol === value || item.nse_symbol === value);
+  }, [stocks, value]);
 
-  // Filter stocks based on search term
   const filteredStocks = useMemo(() => {
-    if (!searchTerm) {
-      return { popular: stocks.popular, all: [] };
+    if (!search.trim()) {
+      const result = {
+        popular: stocks.popular.slice(0, 12),
+        all: stocks.all.slice(0, 30),
+      };
+      console.log('🔍 Filtered stocks (no search):', {
+        popularCount: result.popular.length,
+        allCount: result.all.length,
+      });
+      return result;
     }
 
-    const term = searchTerm.toLowerCase();
-    const filtered = stocks.all.filter(stock => 
-      stock.symbol.toLowerCase().includes(term) || 
-      stock.nse_symbol.toLowerCase().includes(term) ||
-      stock.name.toLowerCase().includes(term)
+    const term = search.trim().toLowerCase();
+    const allResults = stocks.all.filter((item) =>
+      [item.symbol, item.nse_symbol, item.name].some((field) => field?.toLowerCase().includes(term)),
     );
 
-    return { popular: [], all: filtered.slice(0, 50) }; // Limit to 50 results
-  }, [stocks, searchTerm]);
+    const result = {
+      popular: [],
+      all: allResults.slice(0, 40),
+    };
+    console.log('🔍 Filtered stocks (search:', term, '):', {
+      allCount: result.all.length,
+    });
+    return result;
+  }, [stocks, search]);
 
-  const handleSelect = (stock) => {
-    onChange(stock.symbol); // Pass the full symbol with .NS suffix
-    setIsOpen(false);
-    setSearchTerm('');
-  };
-
-  if (loading) {
-    return <div className="stock-selector-loading">Loading stocks...</div>;
-  }
+  const selectedLabel = selectedStock
+    ? `${selectedStock.nse_symbol} - ${selectedStock.name}`
+    : 'Select stock';
 
   return (
-    <div className="stock-selector">
-      <div 
-        className="stock-selector-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+    <div className="selector" ref={containerRef}>
+      <button
+        type="button"
+        className="selector-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        disabled={loading}
       >
-        <span>{selectedLabel}</span>
-        <span className="stock-selector-arrow">{isOpen ? '▲' : '▼'}</span>
-      </div>
+        <span>{loading ? 'Loading stocks...' : selectedLabel}</span>
+        <span className={`selector-chevron ${open ? 'open' : ''}`} />
+      </button>
 
-      {isOpen && (
-        <div className="stock-selector-dropdown">
-          <div className="stock-selector-search">
+      {open && (
+        <div className="selector-dropdown" role="listbox">
+          <div className="selector-search-wrap">
             <input
-              type="text"
-              placeholder="🔍 Search 2200+ NSE stocks..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
+              className="selector-search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by symbol or company"
               autoFocus
             />
           </div>
 
-          <div className="stock-selector-content">
-            {/* Popular Stocks Section (NIFTY 50) */}
-            {filteredStocks.popular.length > 0 && (
-              <div className="stock-section">
-                <div className="stock-section-header">⭐ NIFTY 50</div>
-                {filteredStocks.popular.map(stock => (
-                  <div
+          <div className="selector-list">
+            {!search && filteredStocks.popular.length > 0 && (
+              <>
+                <div className="selector-section-label">Popular</div>
+                {filteredStocks.popular.map((stock) => (
+                  <button
+                    type="button"
                     key={stock.symbol}
-                    className={`stock-item ${value === stock.symbol ? 'selected' : ''}`}
-                    onClick={() => handleSelect(stock)}
+                    className={`selector-item ${value === stock.symbol ? 'is-selected' : ''}`}
+                    onClick={() => {
+                      onChange(stock.symbol);
+                      setSearch('');
+                      setOpen(false);
+                    }}
                   >
-                    <div className="stock-item-symbol">{stock.nse_symbol}</div>
-                    <div className="stock-item-name">{stock.name}</div>
-                    {stock.sector && <div className="stock-item-sector">{stock.sector}</div>}
-                  </div>
+                    <span>{stock.nse_symbol}</span>
+                    <small>{stock.name}</small>
+                  </button>
                 ))}
-              </div>
+              </>
             )}
 
-            {/* Divider */}
-            {filteredStocks.popular.length > 0 && filteredStocks.all.length > 0 && (
-              <div className="stock-divider"></div>
-            )}
-
-            {/* Search Results */}
             {filteredStocks.all.length > 0 && (
-              <div className="stock-section">
-                <div className="stock-section-header">
-                  📊 SEARCH RESULTS ({filteredStocks.all.length})
-                </div>
-                {filteredStocks.all.map(stock => (
-                  <div
+              <>
+                <div className="selector-section-label">All Stocks</div>
+                {filteredStocks.all.map((stock) => (
+                  <button
+                    type="button"
                     key={stock.symbol}
-                    className={`stock-item ${value === stock.symbol ? 'selected' : ''}`}
-                    onClick={() => handleSelect(stock)}
+                    className={`selector-item ${value === stock.symbol ? 'is-selected' : ''}`}
+                    onClick={() => {
+                      onChange(stock.symbol);
+                      setSearch('');
+                      setOpen(false);
+                    }}
                   >
-                    <div className="stock-item-symbol">{stock.nse_symbol}</div>
-                    <div className="stock-item-name">{stock.name}</div>
-                  </div>
+                    <span>{stock.nse_symbol}</span>
+                    <small>{stock.name}</small>
+                  </button>
                 ))}
-              </div>
+              </>
             )}
 
-            {/* No results */}
-            {filteredStocks.popular.length === 0 && filteredStocks.all.length === 0 && searchTerm && (
-              <div className="stock-no-results">
-                No stocks found for "{searchTerm}"
-              </div>
+            {filteredStocks.popular.length === 0 && filteredStocks.all.length === 0 && (
+              <p className="selector-empty">No stocks matched your search.</p>
             )}
           </div>
         </div>
@@ -158,4 +168,3 @@ const StockSelector = ({ value, onChange }) => {
 };
 
 export default StockSelector;
-
