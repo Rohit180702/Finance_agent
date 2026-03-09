@@ -60,7 +60,17 @@ def create_agent():
 
   # Add Redis checkpointer for conversation memory
   # Use Redis client with decode_responses=False (RedisSaver needs bytes)
-  redis_client = get_redis_checkpointer_client()
-  checkpointer = RedisSaver(redis_client=redis_client)
+  try:
+    redis_client = get_redis_checkpointer_client()
+    redis_client.ping()  # Test connection
+    checkpointer = RedisSaver(redis_client=redis_client)
 
-  return graph.compile(checkpointer=checkpointer)
+    # CRITICAL: Must call setup() to initialize internal structures
+    checkpointer.setup()
+
+    print("✅ Agent graph compiled with Redis checkpointer")
+    return graph.compile(checkpointer=checkpointer)
+  except Exception as e:
+    print(f"❌ Redis not available, cannot compile agent: {e}")
+    print("⚠️  Make sure Redis is running: docker-compose up -d redis")
+    raise

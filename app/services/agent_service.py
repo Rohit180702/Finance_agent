@@ -26,8 +26,16 @@ class AgentService:
             # Configure with the session's thread_id
             config = {"configurable": {"thread_id": session_id}}
 
-            # Get the current state from the checkpointer
-            state = self.agent.get_state(config)
+            # Debug: Print full traceback on error
+            import traceback
+            try:
+                # Get the current state from the checkpointer
+                state = self.agent.get_state(config)
+            except Exception as e:
+                print(f"Error in get_state: {e}")
+                print(f"Full traceback:")
+                traceback.print_exc()
+                raise
 
             # Extract messages from state
             messages_list = []
@@ -80,6 +88,15 @@ class AgentService:
             # Configure the agent with thread_id for persistence
             config = {"configurable": {"thread_id": session_id}}
 
+            # Debug: Check checkpointer
+            if hasattr(self.agent, 'checkpointer') and self.agent.checkpointer:
+                if hasattr(self.agent.checkpointer, 'redis_client'):
+                    print(f"DEBUG: Checkpointer redis_client = {self.agent.checkpointer.redis_client}")
+                else:
+                    print(f"DEBUG: Checkpointer has no redis_client attribute")
+            else:
+                print(f"DEBUG: Agent has no checkpointer!")
+
             # Invoke the agent with just the current message
             # Redis checkpointer handles conversation history automatically
             result = self.agent.invoke(
@@ -91,9 +108,36 @@ class AgentService:
             result_messages = result.get("messages", [])
             if result_messages:
                 last_message = result_messages[-1]
+
+                # Parse Extended Thinking content blocks
+                thinking_content = None
+                text_content = None
+
                 # Handle different message formats
                 if hasattr(last_message, "content"):
-                    response = last_message.content
+                    content = last_message.content
+
+                    # Check if content is a list of blocks (Extended Thinking format)
+                    if isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict):
+                                if block.get("type") == "thinking":
+                                    thinking_content = block.get("thinking", "")
+                                elif block.get("type") == "text":
+                                    text_content = block.get("text", "")
+                            # Handle LangChain's content block objects
+                            elif hasattr(block, "type"):
+                                if block.type == "thinking":
+                                    thinking_content = getattr(block, "thinking", "")
+                                elif block.type == "text":
+                                    text_content = getattr(block, "text", "")
+
+                        # If we found text content, use it; otherwise use the whole content
+                        response = text_content if text_content else str(content)
+                    else:
+                        # Simple string content (no Extended Thinking)
+                        response = content
+
                 elif isinstance(last_message, tuple):
                     response = last_message[1]
                 else:
@@ -103,6 +147,7 @@ class AgentService:
 
             return {
                 "response": response,
+                "thinking": thinking_content,  # Include thinking if available
                 "session_id": session_id
             }
 

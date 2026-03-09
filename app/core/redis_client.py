@@ -63,6 +63,15 @@ class RedisClient:
                     health_check_interval=30
                 )
 
+                # Test connection
+                try:
+                    cls._checkpointer_instance.ping()
+                    print(f"✅ Redis checkpointer connected: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                except redis.ConnectionError as e:
+                    print(f"❌ Redis checkpointer connection failed: {e}")
+                    print("⚠️  Make sure Redis is running: docker-compose up -d redis")
+                    raise
+
             return cls._checkpointer_instance
 
     @classmethod

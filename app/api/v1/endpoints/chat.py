@@ -41,7 +41,8 @@ async def send_message(request: ChatRequest):
         return ChatResponse(
             success=True,
             message=response_message,
-            session_id=result["session_id"]  # Return session_id for client to store
+            session_id=result["session_id"],  # Return session_id for client to store
+            thinking=result.get("thinking")  # Include Extended Thinking if available
         )
 
     except Exception as e:

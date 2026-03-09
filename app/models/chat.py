@@ -19,3 +19,4 @@ class ChatResponse(BaseModel):
     success: bool
     message: ChatMessage
     session_id: Optional[str] = None
+    thinking: Optional[str] = None  # Extended Thinking content from Claude
