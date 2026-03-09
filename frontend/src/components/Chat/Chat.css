@@ -73,6 +73,55 @@
   border-color: rgba(92, 164, 214, 0.35);
 }
 
+/* Extended Thinking Section */
+.thinking-section {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.thinking-section summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(147, 197, 253, 0.9);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.thinking-section summary:hover {
+  color: rgba(147, 197, 253, 1);
+}
+
+.thinking-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(59, 130, 246, 0.15);
+  font-size: 13px;
+  color: rgba(203, 213, 225, 0.85);
+  line-height: 1.6;
+}
+
+.thinking-content p {
+  margin: 8px 0;
+}
+
+.thinking-content code {
+  background: rgba(15, 17, 21, 0.5);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
 /* Markdown content styling */
 .message-content {
   line-height: 1.6;

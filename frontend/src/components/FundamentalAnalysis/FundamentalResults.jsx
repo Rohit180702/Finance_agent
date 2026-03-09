@@ -2,24 +2,64 @@ import ReactMarkdown from 'react-markdown';
 import Card from '../ui/Card';
 import EmptyState from '../ui/EmptyState';
 import Skeleton from '../ui/Skeleton';
+import './FundamentalResults.css';
+import './FundamentalAnalysis.css';
 
-const parseMetrics = (text = '') => {
-  const lines = text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 6);
+// Parse markdown sections from the consolidated report based on analysis type
+const getRelevantSection = (markdown = '', analysisType = 'all') => {
+  // If 'all' or 'overview', return the full report
+  if (analysisType === 'all') {
+    return markdown;
+  }
 
-  return lines.map((line, index) => {
-    const parts = line.split(':');
-    if (parts.length >= 2) {
-      return { key: parts[0], value: parts.slice(1).join(':').trim() };
+  // Split by h2 headers (##) - keep the header with each section
+  const lines = markdown.split('\n');
+  const sections = [];
+  let currentSection = { header: '', content: [] };
+
+  lines.forEach(line => {
+    if (line.startsWith('## ')) {
+      // Save previous section if it has content
+      if (currentSection.header || currentSection.content.length > 0) {
+        sections.push(currentSection);
+      }
+      // Start new section
+      currentSection = { header: line, content: [line] };
+    } else {
+      currentSection.content.push(line);
     }
-    return { key: `Insight ${index + 1}`, value: line };
   });
+
+  // Don't forget the last section
+  if (currentSection.header || currentSection.content.length > 0) {
+    sections.push(currentSection);
+  }
+
+  // Map analysis types to section headers - match exact headers from backend
+  const sectionMap = {
+    'ratios': ['## 🏢 Company Information', '## 📊 Key Ratios'],
+    'balance_sheet': ['## 🏦 Balance Sheet'],
+    'cashflow': ['## 💰 Cash Flow Analysis'],
+    'income': ['## 📈 Profit & Loss']
+  };
+
+  const targetHeaders = sectionMap[analysisType] || [];
+
+  // Filter sections that match our target headers
+  const matchedSections = sections.filter(section =>
+    targetHeaders.some(header => section.header === header)
+  );
+
+  // Join matched sections
+  const relevantContent = matchedSections
+    .map(section => section.content.join('\n'))
+    .join('\n\n');
+
+  // If no specific section found, return full report
+  return relevantContent || markdown;
 };
 
-const FundamentalResults = ({ result, loading }) => {
+const FundamentalResults = ({ result, loading, analysisType = 'all' }) => {
   if (loading) {
     return (
       <div className="fundamental-loading">
@@ -39,15 +79,27 @@ const FundamentalResults = ({ result, loading }) => {
     );
   }
 
-  const metrics = parseMetrics(result.response);
+  const content = getRelevantSection(result.response, analysisType);
+
+  // Get a friendly title based on analysis type
+  const getTitleForType = (type) => {
+    const titles = {
+      'all': 'Complete Financial Analysis',
+      'ratios': 'Key Fundamental Ratios',
+      'balance_sheet': 'Balance Sheet Analysis',
+      'cashflow': 'Cash Flow Analysis',
+      'income': 'Income Statement Analysis'
+    };
+    return titles[type] || 'Financial Analysis';
+  };
 
   return (
     <div className="fundamental-results">
       <Card title="Summary" subtitle={`Generated for ${result.symbol}`}>
         <div className="summary-grid">
           <div className="summary-item">
-            <span>Analysis Type</span>
-            <strong>{result.analysisType.replace('_', ' ')}</strong>
+            <span>Current View</span>
+            <strong>{analysisType.replace('_', ' ')}</strong>
           </div>
           <div className="summary-item">
             <span>Timestamp</span>
@@ -60,20 +112,9 @@ const FundamentalResults = ({ result, loading }) => {
         </div>
       </Card>
 
-      <Card title="Key Metrics" subtitle="Extracted from agent response highlights.">
-        <div className="metrics-grid">
-          {metrics.map((metric) => (
-            <article className="metric-card" key={`${metric.key}-${metric.value}`}>
-              <p>{metric.key}</p>
-              <h4>{metric.value}</h4>
-            </article>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="AI Commentary" subtitle="Narrative interpretation and context.">
+      <Card title={getTitleForType(analysisType)} subtitle="AI-generated financial insights">
         <div className="commentary-panel">
-          <ReactMarkdown>{result.response}</ReactMarkdown>
+          <ReactMarkdown>{content}</ReactMarkdown>
         </div>
       </Card>
     </div>

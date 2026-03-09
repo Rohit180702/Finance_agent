@@ -49,6 +49,15 @@ const Chat = () => {
           className={`chat-message-row ${msg.role === 'user' ? 'is-user' : 'is-assistant'}`}
         >
           <div className="chat-message-bubble">
+            {/* Show thinking if available (Extended Thinking) */}
+            {msg.thinking && msg.role === 'assistant' && (
+              <details className="thinking-section">
+                <summary>🧠 Show Reasoning</summary>
+                <div className="thinking-content">
+                  <ReactMarkdown>{msg.thinking}</ReactMarkdown>
+                </div>
+              </details>
+            )}
             <div className="message-content">
               <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>

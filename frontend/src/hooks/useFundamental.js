@@ -16,18 +16,17 @@ export const useFundamental = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await analyzeFundamentals(symbol, analysisType);
-      
-      // Parse the agent's response to extract structured data
-      // For now, we'll store the raw response
+
+      // Store the AI-generated response from the chat endpoint
       setResult({
         symbol,
         analysisType,
-        response: data.message.content,
-        timestamp: data.message.timestamp,
+        response: data.response,
+        timestamp: new Date().toISOString(),
       });
-      
+
     } catch (err) {
       setError(err.message);
       console.error('Failed to analyze fundamentals:', err);

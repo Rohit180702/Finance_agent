@@ -11,40 +11,37 @@ const analysisOptions = [
   { value: 'income', label: 'Income Statement' },
 ];
 
-const FundamentalForm = ({ onSubmit, loading }) => {
-  const [formData, setFormData] = useState({
-    symbol: '',
-    analysisType: 'all',
-  });
+const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange }) => {
+  const [symbol, setSymbol] = useState('');
 
   return (
     <form
       className="fundamental-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!formData.symbol || loading) return;
-        onSubmit(formData);
+        if (!symbol || loading) return;
+        onSubmit({ symbol, analysisType });
       }}
     >
       <div className="field-grid-2">
         <div className="ui-field">
           <span className="ui-field-label">Stock</span>
           <StockSelector
-            value={formData.symbol}
-            onChange={(value) => setFormData((prev) => ({ ...prev, symbol: value }))}
+            value={symbol}
+            onChange={setSymbol}
           />
         </div>
         <div className="ui-field">
           <span className="ui-field-label">Analysis View</span>
           <SegmentedControl
-            value={formData.analysisType}
-            onChange={(value) => setFormData((prev) => ({ ...prev, analysisType: value }))}
+            value={analysisType}
+            onChange={onAnalysisTypeChange}
             options={analysisOptions}
           />
         </div>
       </div>
 
-      <Button type="submit" disabled={!formData.symbol || loading}>
+      <Button type="submit" disabled={!symbol || loading}>
         {loading ? 'Analyzing...' : 'Run Fundamental Analysis'}
       </Button>
     </form>

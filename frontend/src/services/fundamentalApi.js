@@ -24,9 +24,9 @@ fundamentalApi.interceptors.response.use(
  * Analyze stock fundamentals
  */
 export const analyzeFundamentals = async (symbol, analysisType = 'all') => {
-  // Use chat endpoint to leverage the agent
+  // Use the chat endpoint for AI-generated analysis
   const response = await fundamentalApi.post('/chat/message', {
-    message: `Analyze ${symbol} fundamentals with analysis_type=${analysisType}`,
+    message: `Provide a comprehensive fundamental analysis for ${symbol}`,
     history: [],
   });
   return response.data;

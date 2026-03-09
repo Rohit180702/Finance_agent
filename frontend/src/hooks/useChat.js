@@ -63,8 +63,12 @@ export const useChat = () => {
           localStorage.setItem(SESSION_STORAGE_KEY, response.session_id);
         }
 
-        // Add assistant response to UI
-        setMessages((prev) => [...prev, response.message]);
+        // Add assistant response to UI (with thinking if available)
+        const assistantMessage = {
+          ...response.message,
+          thinking: response.thinking  // Include Extended Thinking
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
       }
     } catch (err) {
       setError(err.message);
