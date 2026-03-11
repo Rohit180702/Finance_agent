@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import StockSelector from '../TechnicalAnalysis/StockSelector';
 import Button from '../ui/Button';
-import SegmentedControl from '../ui/SegmentedControl';
+import Select from '../ui/Select';
 
 const analysisOptions = [
-  { value: 'all', label: 'Overview' },
-  { value: 'ratios', label: 'Ratios' },
-  { value: 'balance_sheet', label: 'Balance Sheet' },
-  { value: 'cashflow', label: 'Cash Flow' },
-  { value: 'income', label: 'Income Statement' },
+  { value: 'all', label: 'Overview — Full Analysis + Investment Verdict' },
+  { value: 'ratios', label: 'Ratios — Valuation, Profitability & Health' },
+  { value: 'balance_sheet', label: 'Balance Sheet — Assets, Debt & Equity' },
+  { value: 'cashflow', label: 'Cash Flow — OCF, FCF & Capex' },
+  { value: 'income', label: 'Income Statement — Revenue, Margins & Earnings' },
 ];
 
-const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange }) => {
+const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange, isCached }) => {
   const [symbol, setSymbol] = useState('');
 
   return (
@@ -31,18 +31,20 @@ const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange
             onChange={setSymbol}
           />
         </div>
-        <div className="ui-field">
-          <span className="ui-field-label">Analysis View</span>
-          <SegmentedControl
-            value={analysisType}
-            onChange={onAnalysisTypeChange}
-            options={analysisOptions}
-          />
-        </div>
+        <Select
+          label="Analysis Type"
+          id="analysis-type"
+          value={analysisType}
+          onChange={(e) => onAnalysisTypeChange(e.target.value)}
+        >
+          {analysisOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
       </div>
 
       <Button type="submit" disabled={!symbol || loading}>
-        {loading ? 'Analyzing...' : 'Run Fundamental Analysis'}
+        {loading ? 'Analyzing...' : isCached ? 'Re-run Analysis' : 'Run Analysis'}
       </Button>
     </form>
   );

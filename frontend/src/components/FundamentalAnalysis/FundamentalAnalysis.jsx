@@ -6,8 +6,18 @@ import FundamentalForm from './FundamentalForm';
 import FundamentalResults from './FundamentalResults';
 
 const FundamentalAnalysis = () => {
-  const { loading, error, result, analyze } = useFundamental();
+  const { loading, error, result, analyze, isCached } = useFundamental();
   const [analysisType, setAnalysisType] = useState('all');
+  const [currentSymbol, setCurrentSymbol] = useState('');
+
+  const handleAnalysisTypeChange = (newType) => {
+    setAnalysisType(newType);
+  };
+
+  const handleSubmit = async (formData) => {
+    setCurrentSymbol(formData.symbol);
+    await analyze(formData.symbol, analysisType);
+  };
 
   return (
     <section className="fundamental-layout">
@@ -15,11 +25,9 @@ const FundamentalAnalysis = () => {
         <FundamentalForm
           loading={loading}
           analysisType={analysisType}
-          onAnalysisTypeChange={setAnalysisType}
-          onSubmit={async (formData) => {
-            // Always run full analysis to get all data
-            await analyze(formData.symbol, 'all');
-          }}
+          onAnalysisTypeChange={handleAnalysisTypeChange}
+          onSubmit={handleSubmit}
+          isCached={currentSymbol ? isCached(currentSymbol, analysisType) : false}
         />
       </Card>
 

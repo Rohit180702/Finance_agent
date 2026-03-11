@@ -20,59 +20,25 @@ fundamentalApi.interceptors.response.use(
   }
 );
 
-/**
- * Analyze stock fundamentals
- */
-export const analyzeFundamentals = async (symbol, analysisType = 'all') => {
-  // Use the chat endpoint for AI-generated analysis
-  const response = await fundamentalApi.post('/chat/message', {
-    message: `Provide a comprehensive fundamental analysis for ${symbol}`,
-    history: [],
-  });
-  return response.data;
+// Map frontend analysisType values → backend component values
+const COMPONENT_MAP = {
+  all: '',
+  ratios: 'ratios',
+  balance_sheet: 'balance_sheet',
+  cashflow: 'cashflow',
+  income: 'income',
 };
 
 /**
- * Get fundamental ratios
+ * Run fundamental analysis.
+ * analysisType = 'all' → full parallel analysis (overview + investment verdict)
+ * analysisType = 'ratios' | 'balance_sheet' | 'cashflow' | 'income' → deep dive
+ *
+ * Returns: { success, symbol, component, consolidated_report, individual_results, errors, timestamp }
  */
-export const getFundamentalRatios = async (symbol) => {
-  const response = await fundamentalApi.post('/chat/message', {
-    message: `Get fundamental ratios for ${symbol}`,
-    history: [],
-  });
-  return response.data;
-};
-
-/**
- * Get balance sheet
- */
-export const getBalanceSheet = async (symbol) => {
-  const response = await fundamentalApi.post('/chat/message', {
-    message: `Get balance sheet for ${symbol}`,
-    history: [],
-  });
-  return response.data;
-};
-
-/**
- * Get cash flow statement
- */
-export const getCashFlow = async (symbol) => {
-  const response = await fundamentalApi.post('/chat/message', {
-    message: `Get cash flow statement for ${symbol}`,
-    history: [],
-  });
-  return response.data;
-};
-
-/**
- * Get income statement
- */
-export const getIncomeStatement = async (symbol) => {
-  const response = await fundamentalApi.post('/chat/message', {
-    message: `Get income statement for ${symbol}`,
-    history: [],
-  });
+export const analyzeFundamentals = async (symbol, analysisType = 'all', query = '') => {
+  const component = COMPONENT_MAP[analysisType] ?? '';
+  const response = await fundamentalApi.post('/fundamental/analyze', { symbol, query, component });
   return response.data;
 };
 
