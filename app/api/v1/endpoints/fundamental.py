@@ -14,6 +14,7 @@ class FundamentalRequest(BaseModel):
     """Request for fundamental analysis"""
     symbol: str
     query: str = ""
+    component: str = ""  # "" or "all" = full analysis; "ratios"|"balance_sheet"|"cashflow"|"income" = deep dive
 
 
 class FundamentalResponse(BaseModel):
@@ -45,7 +46,8 @@ async def analyze_fundamentals(request: FundamentalRequest):
     try:
         result = await fundamental_service.analyze(
             symbol=request.symbol,
-            user_query=request.query
+            user_query=request.query,
+            component=request.component,
         )
 
         return FundamentalResponse(**result)

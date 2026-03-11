@@ -12,6 +12,7 @@ class FundamentalAnalysisState(TypedDict):
     # Input
     symbol: str
     user_query: str
+    component: str  # "" or "all" = full analysis; "ratios"|"balance_sheet"|"cashflow"|"income" = deep dive
 
     # Individual agent results
     ratio_analysis: dict | None

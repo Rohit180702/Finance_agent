@@ -12,6 +12,8 @@ from app.agent.tools.fundamental_income import get_income_statement
 from app.core.redis_client import get_redis_checkpointer_client
 from datetime import datetime
 import numpy as np
+import json
+import os
 
 
 def _convert_numpy_types(obj):
@@ -91,89 +93,166 @@ def pnl_agent(state: FundamentalAnalysisState) -> dict:
         }
 
 
-def consolidator_agent(state: FundamentalAnalysisState) -> dict:
-    """Consolidate all results into a comprehensive report"""
-    symbol = state["symbol"]
-    report_parts = [f"# Fundamental Analysis Report for {symbol}\n"]
+def _build_llm_context(symbol: str, state: FundamentalAnalysisState) -> dict:
+    """Extract the structured data from all agents, excluding large raw/full dumps."""
+    ctx = {}
 
-    # Company Info Section
     if state.get("ratio_analysis") and state["ratio_analysis"].get("success"):
         data = state["ratio_analysis"].get("data", {})
-        company_info = data.get("company_info", {})
+        # Exclude raw_info — it's 164+ fields and adds no extra value for the LLM
+        ctx["company_info"] = data.get("company_info", {})
+        ctx["valuation_ratios"] = data.get("valuation_ratios", {})
+        ctx["profitability_ratios"] = data.get("profitability_ratios", {})
+        ctx["liquidity_ratios"] = data.get("liquidity_ratios", {})
+        ctx["leverage_ratios"] = data.get("leverage_ratios", {})
+        ctx["dividend_metrics"] = data.get("dividend_metrics", {})
+        ctx["growth_rates"] = data.get("growth_rates", {})
+        ctx["per_share_metrics"] = data.get("per_share_metrics", {})
+        ctx["market_metrics"] = data.get("market_metrics", {})
+        ctx["price_metrics"] = data.get("price_metrics", {})
+        ctx["analyst_data"] = data.get("analyst_data", {})
+        ctx["governance_risk"] = data.get("governance_risk", {})
 
-        if company_info.get("long_name"):
-            report_parts.append(f"\n## 🏢 Company Information")
-            report_parts.append(f"- **Name**: {company_info.get('long_name')}")
-            report_parts.append(f"- **Sector**: {company_info.get('sector')}")
-            report_parts.append(f"- **Industry**: {company_info.get('industry')}")
-            report_parts.append(f"- **Country**: {company_info.get('country')}")
-            if company_info.get('full_time_employees'):
-                report_parts.append(f"- **Employees**: {company_info.get('full_time_employees'):,}")
+    if state.get("cashflow_analysis") and state["cashflow_analysis"].get("success"):
+        ctx["cash_flow"] = state["cashflow_analysis"].get("cashflow", {})
+        ctx["cash_flow_historical"] = state["cashflow_analysis"].get("historical_data", {})
 
-    # Ratios Section
+    if state.get("balance_sheet_analysis") and state["balance_sheet_analysis"].get("success"):
+        ctx["balance_sheet"] = state["balance_sheet_analysis"].get("balance_sheet", {})
+        ctx["balance_sheet_historical"] = state["balance_sheet_analysis"].get("historical_data", {})
+
+    if state.get("pnl_analysis") and state["pnl_analysis"].get("success"):
+        ctx["income_statement"] = state["pnl_analysis"].get("income_statement", {})
+        ctx["income_historical"] = state["pnl_analysis"].get("historical_data", {})
+
+    return ctx
+
+
+def _build_fallback_report(symbol: str, state: FundamentalAnalysisState) -> str:
+    """Simple formatted report used as a fallback if LLM call fails."""
+    parts = [f"# Fundamental Analysis Report for {symbol}\n"]
+
     if state.get("ratio_analysis") and state["ratio_analysis"].get("success"):
         data = state["ratio_analysis"].get("data", {})
-        valuation = data.get("valuation_ratios", {})
-        profitability = data.get("profitability_ratios", {})
-        liquidity = data.get("liquidity_ratios", {})
-        leverage = data.get("leverage_ratios", {})
+        info = data.get("company_info", {})
+        if info.get("long_name"):
+            parts += [
+                "\n## 🏢 Company Information",
+                f"- **Name**: {info.get('long_name')}",
+                f"- **Sector**: {info.get('sector')}",
+                f"- **Industry**: {info.get('industry')}",
+                f"- **Country**: {info.get('country')}",
+            ]
+            if info.get("full_time_employees"):
+                parts.append(f"- **Employees**: {info['full_time_employees']:,}")
 
-        report_parts.append("\n## 📊 Key Ratios")
-        if valuation:
-            report_parts.append("\n**Valuation:**")
-            if valuation.get('trailing_pe'):
-                report_parts.append(f"- PE Ratio (TTM): {valuation.get('trailing_pe'):.2f}")
-            if valuation.get('forward_pe'):
-                report_parts.append(f"- Forward PE: {valuation.get('forward_pe'):.2f}")
-            if valuation.get('price_to_book'):
-                report_parts.append(f"- Price/Book: {valuation.get('price_to_book'):.2f}")
+        val = data.get("valuation_ratios", {})
+        prof = data.get("profitability_ratios", {})
+        liq = data.get("liquidity_ratios", {})
+        lev = data.get("leverage_ratios", {})
+        parts.append("\n## 📊 Key Ratios")
+        if val.get("trailing_pe"):
+            parts.append(f"- PE Ratio (TTM): {val['trailing_pe']:.2f}")
+        if val.get("forward_pe"):
+            parts.append(f"- Forward PE: {val['forward_pe']:.2f}")
+        if val.get("price_to_book"):
+            parts.append(f"- Price/Book: {val['price_to_book']:.2f}")
+        if prof.get("return_on_equity"):
+            parts.append(f"- ROE: {prof['return_on_equity']*100:.2f}%")
+        if prof.get("profit_margins"):
+            parts.append(f"- Net Margin: {prof['profit_margins']*100:.2f}%")
+        if liq.get("current_ratio"):
+            parts.append(f"- Current Ratio: {liq['current_ratio']:.2f}")
+        if lev.get("debt_to_equity"):
+            parts.append(f"- Debt/Equity: {lev['debt_to_equity']:.2f}")
 
-        if profitability:
-            report_parts.append("\n**Profitability:**")
-            if profitability.get('return_on_equity'):
-                report_parts.append(f"- ROE: {profitability.get('return_on_equity')*100:.2f}%")
-            if profitability.get('return_on_assets'):
-                report_parts.append(f"- ROA: {profitability.get('return_on_assets')*100:.2f}%")
-            if profitability.get('profit_margins'):
-                report_parts.append(f"- Net Margin: {profitability.get('profit_margins')*100:.2f}%")
-
-        if liquidity or leverage:
-            report_parts.append("\n**Financial Health:**")
-            if liquidity.get('current_ratio'):
-                report_parts.append(f"- Current Ratio: {liquidity.get('current_ratio'):.2f}")
-            if leverage.get('debt_to_equity'):
-                report_parts.append(f"- Debt/Equity: {leverage.get('debt_to_equity'):.2f}")
-
-    # Cash Flow Section
     if state.get("cashflow_analysis") and state["cashflow_analysis"].get("success"):
         cf = state["cashflow_analysis"]["cashflow"]
-        report_parts.append("\n## 💰 Cash Flow Analysis")
-        if cf.get('operating_cash_flow'):
-            report_parts.append(f"- Operating Cash Flow: ${cf.get('operating_cash_flow'):,.0f}")
-        if cf.get('free_cash_flow'):
-            report_parts.append(f"- Free Cash Flow: ${cf.get('free_cash_flow'):,.0f}")
+        parts.append("\n## 💰 Cash Flow Analysis")
+        if cf.get("operating_cash_flow"):
+            parts.append(f"- Operating Cash Flow: ₹{cf['operating_cash_flow']:,.0f}")
+        if cf.get("free_cash_flow"):
+            parts.append(f"- Free Cash Flow: ₹{cf['free_cash_flow']:,.0f}")
 
-    # Balance Sheet Section
     if state.get("balance_sheet_analysis") and state["balance_sheet_analysis"].get("success"):
         bs = state["balance_sheet_analysis"]["balance_sheet"]
-        report_parts.append("\n## 🏦 Balance Sheet")
-        if bs.get('total_assets'):
-            report_parts.append(f"- Total Assets: ${bs.get('total_assets'):,.0f}")
-        if bs.get('total_equity_gross_minority_interest'):
-            report_parts.append(f"- Total Equity: ${bs.get('total_equity_gross_minority_interest'):,.0f}")
+        parts.append("\n## 🏦 Balance Sheet")
+        if bs.get("total_assets"):
+            parts.append(f"- Total Assets: ₹{bs['total_assets']:,.0f}")
 
-    # P&L Section
     if state.get("pnl_analysis") and state["pnl_analysis"].get("success"):
         pnl = state["pnl_analysis"]["income_statement"]
-        report_parts.append("\n## 📈 Profit & Loss")
-        if pnl.get('total_revenue'):
-            report_parts.append(f"- Total Revenue: ${pnl.get('total_revenue'):,.0f}")
-        if pnl.get('net_income'):
-            report_parts.append(f"- Net Income: ${pnl.get('net_income'):,.0f}")
+        parts.append("\n## 📈 Profit & Loss")
+        if pnl.get("total_revenue"):
+            parts.append(f"- Total Revenue: ₹{pnl['total_revenue']:,.0f}")
+        if pnl.get("net_income"):
+            parts.append(f"- Net Income: ₹{pnl['net_income']:,.0f}")
+
+    return "\n".join(parts)
+
+
+def consolidator_agent(state: FundamentalAnalysisState) -> dict:
+    """Pass all 4 agents' data to Claude and generate a rich investment analysis report."""
+    from langchain.chat_models import init_chat_model
+    from app.core.config import settings
+
+    symbol = state["symbol"]
+    user_query = state.get("user_query", "")
+    ctx = _build_llm_context(symbol, state)
+
+    extra_instruction = f"\nThe user specifically asked: {user_query}" if user_query else ""
+
+    prompt = f"""You are a senior equity research analyst specializing in Indian and global markets.
+You have been given comprehensive fundamental data for {symbol} collected from Yahoo Finance.
+Produce a detailed, professional investment analysis report in Markdown format.{extra_instruction}
+
+## DATA PROVIDED:
+```json
+{json.dumps(ctx, indent=2, default=str)}
+```
+
+## REPORT STRUCTURE (use exactly these section headers):
+
+### ## 🏢 Company Information
+Summarize the company: name, sector, industry, country, employees, and a brief description of the business.
+
+### ## 📊 Key Ratios
+Analyse valuation (PE, PB, PEG, EV/EBITDA), profitability (ROE, ROA, margins), liquidity (current/quick ratio), and leverage (Debt/Equity). For each metric, state whether it looks attractive, fair, or stretched vs sector norms.
+
+### ## 💰 Cash Flow Analysis
+Interpret operating cash flow, free cash flow, capex trends, and FCF/OCF conversion. Comment on cash generation quality and sustainability. Include YoY growth if data is available.
+
+### ## 🏦 Balance Sheet
+Cover assets, liabilities, equity, working capital, and debt levels. Flag any concerns (high debt, negative equity, deteriorating current ratio).
+
+### ## 📈 Profit & Loss
+Analyse revenue, gross profit, EBITDA, and net income. Highlight margin trends, revenue growth, and earnings quality.
+
+### ## 🔍 Investment Insights
+Provide a concise investment thesis (3–5 bullets):
+- Key strengths
+- Key risks / red flags
+- Overall verdict (Strong Buy / Buy / Hold / Avoid) with a one-line rationale
+- Analyst consensus (if available in the data)
+
+Rules:
+- Use ₹ for Indian stocks (suffix .NS or .BO), $ for US stocks.
+- Format large numbers as Cr (crore) for Indian stocks if > 10,000,000, or B/M for US stocks.
+- Do NOT make up data not present in the provided JSON. If a metric is missing, say "Not available."
+- Be direct and opinionated — avoid generic filler text."""
+
+    try:
+        os.environ["ANTHROPIC_API_KEY"] = settings.ANTHROPIC_API_KEY
+        llm = init_chat_model("claude-sonnet-4-5-20250929", temperature=0)
+        response = llm.invoke(prompt)
+        consolidated_report = response.content
+    except Exception as e:
+        print(f"⚠️  LLM call failed in consolidator, falling back to simple report: {e}")
+        consolidated_report = _build_fallback_report(symbol, state)
 
     return {
-        "consolidated_report": "\n".join(report_parts),
-        "timestamp": datetime.now().isoformat()
+        "consolidated_report": consolidated_report,
+        "timestamp": datetime.now().isoformat(),
     }
 
 
