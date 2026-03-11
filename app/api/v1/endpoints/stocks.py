@@ -10,8 +10,83 @@ from app.services.stock_service import (
     search_stocks,
     get_stock_by_symbol
 )
+import yfinance as yf
+import asyncio
+import time
 
 router = APIRouter()
+
+# ── In-memory cache for market overview ───────────────────────────────────────
+# Avoids hitting Yahoo Finance on every poll from the frontend.
+# TTL: 15 seconds — short enough to stay fresh, long enough to absorb bursts.
+_CACHE_TTL = 4  # seconds — matches the 5s frontend poll
+_cache: dict = {"data": None, "ts": 0, "lock": None}
+
+
+def _get_lock():
+    if _cache["lock"] is None:
+        _cache["lock"] = asyncio.Lock()
+    return _cache["lock"]
+
+
+async def _fetch_indices() -> list:
+    indices = [
+        {"name": "NIFTY 50",   "symbol": "^NSEI"},
+        {"name": "SENSEX",     "symbol": "^BSESN"},
+        {"name": "NIFTY Bank", "symbol": "^NSEBANK"},
+        {"name": "NIFTY IT",   "symbol": "^CNXIT"},
+    ]
+
+    def _sync_fetch():
+        results = []
+        for idx in indices:
+            try:
+                fi    = yf.Ticker(idx["symbol"]).fast_info
+                price = fi.last_price
+                prev  = fi.previous_close
+                change     = round(price - prev, 2)        if (price and prev) else None
+                change_pct = round(change / prev * 100, 2) if (change and prev) else None
+                results.append({
+                    "name": idx["name"], "symbol": idx["symbol"],
+                    "price":      round(price, 2) if price else None,
+                    "change":     change,
+                    "change_pct": change_pct,
+                })
+            except Exception:
+                results.append({
+                    "name": idx["name"], "symbol": idx["symbol"],
+                    "price": None, "change": None, "change_pct": None,
+                })
+        return results
+
+    # Run blocking yfinance calls in a thread pool so the event loop stays free
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _sync_fetch)
+
+
+@router.get("/market-overview", summary="Market Overview")
+async def get_market_overview():
+    """
+    Get live prices and daily change for key Indian market indices.
+    Results are cached for 15 seconds to reduce Yahoo Finance round-trips.
+    """
+    now = time.monotonic()
+
+    # Serve cached data if still fresh
+    if _cache["data"] and (now - _cache["ts"]) < _CACHE_TTL:
+        return {"success": True, "indices": _cache["data"], "cached": True}
+
+    # Only one concurrent fetch — others wait and then get the fresh result
+    async with _get_lock():
+        # Re-check after acquiring the lock (another request may have just refreshed)
+        if _cache["data"] and (now - _cache["ts"]) < _CACHE_TTL:
+            return {"success": True, "indices": _cache["data"], "cached": True}
+
+        results = await _fetch_indices()
+        _cache["data"] = results
+        _cache["ts"]   = time.monotonic()
+
+    return {"success": True, "indices": results, "cached": False}
 
 
 @router.get("/popular", summary="Get Popular Stocks")

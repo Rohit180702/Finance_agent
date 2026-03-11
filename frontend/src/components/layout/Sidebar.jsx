@@ -1,71 +1,92 @@
-import Button from '../ui/Button';
+import { NavLink } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  TrendingUp,
+  BarChart3,
+  Newspaper,
+  SlidersHorizontal,
+  MessageSquare,
+  X,
+} from 'lucide-react';
 
-const navItems = [
-  {
-    key: 'chat',
-    label: 'Chat',
-    description: 'AI assistant',
-  },
-  {
-    key: 'technical',
-    label: 'Technical Analysis',
-    description: 'Indicators & setups',
-  },
-  {
-    key: 'fundamental',
-    label: 'Fundamental Analysis',
-    description: 'Financial statements',
-  },
-  {
-    key: 'sentiment',
-    label: 'Sentiment Analysis',
-    description: 'News & market tone',
-  },
+const NAV_WORKSPACE = [
+  { to: '/',         icon: LayoutDashboard,  label: 'Dashboard' },
+  { to: '/screener', icon: SlidersHorizontal, label: 'Screener', soon: true },
 ];
 
-const Sidebar = ({ activeTab, onTabChange, isOpen, onClose }) => {
-  return (
-    <>
-      <aside className={`app-sidebar ${isOpen ? 'is-open' : ''}`.trim()}>
-        <div className="app-brand">
-          <div className="app-brand-mark">FA</div>
-          <div>
-            <h1>Finance Agent</h1>
-            <p>Analytics Workspace</p>
-          </div>
-        </div>
+const NAV_ANALYSIS = [
+  { to: '/technical',   icon: TrendingUp, label: 'Technical' },
+  { to: '/fundamental', icon: BarChart3,  label: 'Fundamental' },
+  { to: '/sentiment',   icon: Newspaper,  label: 'Sentiment' },
+];
 
-        <nav className="app-nav" aria-label="Primary navigation">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`app-nav-item ${activeTab === item.key ? 'is-active' : ''}`}
-              onClick={() => {
-                onTabChange(item.key);
-                onClose();
-              }}
+const Sidebar = ({ isOpen, onClose, onChatOpen }) => (
+  <aside className={`app-sidebar ${isOpen ? 'is-open' : ''}`}>
+    {/* Brand */}
+    <div className="app-brand">
+      <div className="app-brand-mark">FA</div>
+      <div className="app-brand-text">
+        <span className="app-brand-name">Finance Agent</span>
+      </div>
+      <button className="sidebar-x" onClick={onClose} aria-label="Close sidebar">
+        <X size={15} />
+      </button>
+    </div>
+
+    {/* Navigation */}
+    <nav className="app-nav" aria-label="Primary navigation">
+      <div className="nav-group">
+        <span className="nav-group-label">Workspace</span>
+        {NAV_WORKSPACE.map(({ to, icon: Icon, label, soon }) =>
+          soon ? (
+            <div key={to} className="app-nav-item is-disabled">
+              <Icon size={15} />
+              <span>{label}</span>
+              <span className="nav-badge">Soon</span>
+            </div>
+          ) : (
+            <NavLink
+              key={to}
+              to={to}
+              end
+              className={({ isActive }) =>
+                `app-nav-item${isActive ? ' is-active' : ''}`
+              }
+              onClick={onClose}
             >
-              <span className="app-nav-label">{item.label}</span>
-              <span className="app-nav-description">{item.description}</span>
-            </button>
-          ))}
-        </nav>
+              <Icon size={15} />
+              <span>{label}</span>
+            </NavLink>
+          )
+        )}
+      </div>
 
-        <div className="app-sidebar-footer">
-          <Button variant="ghost" size="sm" className="full-width" onClick={onClose}>
-            Close Panel
-          </Button>
-        </div>
-      </aside>
-      <button
-        type="button"
-        className={`app-overlay ${isOpen ? 'is-open' : ''}`.trim()}
-        aria-label="Close navigation"
-        onClick={onClose}
-      />
-    </>
-  );
-};
+      <div className="nav-group">
+        <span className="nav-group-label">Analysis</span>
+        {NAV_ANALYSIS.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `app-nav-item${isActive ? ' is-active' : ''}`
+            }
+            onClick={onClose}
+          >
+            <Icon size={15} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </div>
+    </nav>
+
+    {/* Chat opener */}
+    <div className="app-sidebar-footer">
+      <button className="chat-open-btn" onClick={onChatOpen}>
+        <MessageSquare size={15} />
+        <span>AI Chat</span>
+      </button>
+    </div>
+  </aside>
+);
 
 export default Sidebar;

@@ -1,68 +1,59 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
-import Chat from './components/Chat/Chat';
-import IndicatorForm from './components/TechnicalAnalysis/IndicatorForm';
-import ResultCard from './components/TechnicalAnalysis/ResultCard';
-import FundamentalAnalysis from './components/FundamentalAnalysis/FundamentalAnalysis';
-import SentimentAnalysis from './components/SentimentAnalysis/SentimentAnalysis';
-import Card from './components/ui/Card';
-import ErrorState from './components/ui/ErrorState';
-import { useIndicator } from './hooks/useIndicator';
+import ChatPanel from './components/layout/ChatPanel';
+import DashboardPage from './pages/DashboardPage';
+import TechnicalPage from './pages/TechnicalPage';
+import FundamentalPage from './pages/FundamentalPage';
+import SentimentPage from './pages/SentimentPage';
 import './App.css';
 
-function App() {
-  const { calculate, loading, error, result } = useIndicator();
-  const [activeTab, setActiveTab] = useState('chat');
+function AppShell() {
+  const [chatOpen, setChatOpen]       = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const handleSubmit = async (formData) => {
-    await calculate(formData);
-  };
 
   return (
     <div className="app-shell">
       <Sidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onChatOpen={() => { setChatOpen(true); setSidebarOpen(false); }}
       />
 
       <div className="app-main">
-        <TopBar activeTab={activeTab} onMenuClick={() => setSidebarOpen(true)} />
-
+        <TopBar
+          onMenuClick={() => setSidebarOpen(true)}
+          onChatToggle={() => setChatOpen((o) => !o)}
+        />
         <main className="app-content">
-          {activeTab === 'chat' && <Chat />}
-
-          {activeTab === 'technical' && (
-            <section className="technical-grid">
-              <Card
-                title="Configuration"
-                subtitle="Set stock, indicator, and timeframe parameters."
-              >
-                <IndicatorForm onSubmit={handleSubmit} loading={loading} />
-              </Card>
-
-              <Card title="Result" subtitle="Indicator output, context, and calculation metadata.">
-                {error && (
-                  <ErrorState
-                    title="Calculation failed"
-                    message={error}
-                  />
-                )}
-                <ResultCard result={result} loading={loading} />
-              </Card>
-            </section>
-          )}
-
-          {activeTab === 'fundamental' && <FundamentalAnalysis />}
-
-          {activeTab === 'sentiment' && <SentimentAnalysis />}
+          <Routes>
+            <Route path="/"            element={<DashboardPage />} />
+            <Route path="/technical"   element={<TechnicalPage />} />
+            <Route path="/fundamental" element={<FundamentalPage />} />
+            <Route path="/sentiment"   element={<SentimentPage />} />
+            <Route path="*"            element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
+
+      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+
+      {/* Sidebar overlay for mobile */}
+      <button
+        type="button"
+        className={`app-overlay ${sidebarOpen ? 'is-open' : ''}`}
+        aria-label="Close navigation"
+        onClick={() => setSidebarOpen(false)}
+      />
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
+  );
+}

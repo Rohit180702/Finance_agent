@@ -1,57 +1,49 @@
 import { useEffect, useState } from 'react';
-import Button from '../ui/Button';
+import { useLocation } from 'react-router-dom';
+import { Menu, MessageSquare } from 'lucide-react';
+import { isMarketOpen } from '../../hooks/useMarketOverview';
 
-const titles = {
-  chat: {
-    title: 'AI Chat Desk',
-    subtitle: 'Conversational analysis for equities and indicators.',
-  },
-  technical: {
-    title: 'Technical Analysis',
-    subtitle: 'Configure indicators and evaluate chart context.',
-  },
-  fundamental: {
-    title: 'Fundamental Analysis',
-    subtitle: 'Inspect company metrics and statement narratives.',
-  },
-  sentiment: {
-    title: 'Sentiment Analysis',
-    subtitle: 'Track narrative momentum across news and social tone.',
-  },
+const PAGE_META = {
+  '/':            { title: 'Dashboard',            subtitle: 'Market overview and quick access' },
+  '/technical':   { title: 'Technical Analysis',   subtitle: 'Indicators, chart patterns, and setups' },
+  '/fundamental': { title: 'Fundamental Analysis', subtitle: 'Financial statements and key ratios' },
+  '/sentiment':   { title: 'Sentiment Analysis',   subtitle: 'News momentum and market tone' },
+  '/screener':    { title: 'Stock Screener',        subtitle: 'Filter NSE stocks by fundamentals and technicals' },
 };
 
-const MenuIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-);
-
-const TopBar = ({ activeTab, onMenuClick }) => {
-  const content = titles[activeTab] || titles.chat;
+const TopBar = ({ onMenuClick, onChatToggle }) => {
+  const location = useLocation();
+  const meta = PAGE_META[location.pathname] ?? PAGE_META['/'];
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
   return (
     <header className="app-topbar">
       <div className="app-topbar-left">
-        <Button variant="ghost" size="sm" className="menu-button" onClick={onMenuClick}>
-          <MenuIcon />
-        </Button>
+        <button className="icon-btn menu-btn" onClick={onMenuClick} aria-label="Open menu">
+          <Menu size={17} />
+        </button>
         <div>
-          <h2>{content.title}</h2>
-          <p>{content.subtitle}</p>
+          <h2>{meta.title}</h2>
+          <p>{meta.subtitle}</p>
         </div>
       </div>
+
       <div className="app-topbar-right">
-        <span className="topbar-pill">NSE/BSE</span>
-        <span className="topbar-pill">Live API</span>
-        <span className="topbar-pill is-time">
+        <span className="topbar-pill">NSE · BSE</span>
+        <span className={`topbar-pill ${isMarketOpen() ? 'pill-open' : 'pill-closed'}`}>
+          {isMarketOpen() ? '● Open' : '● Closed'}
+        </span>
+        <span className="topbar-pill">
           {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
+        <button className="icon-btn chat-btn" onClick={onChatToggle} aria-label="Open AI chat">
+          <MessageSquare size={15} />
+        </button>
       </div>
     </header>
   );
