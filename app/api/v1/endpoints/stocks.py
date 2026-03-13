@@ -304,12 +304,22 @@ async def get_stock_metrics_endpoint(symbol: str):
     live = await loop.run_in_executor(None, _live)
 
     if not metrics:
-        # Redis fallback
         from app.jobs.stock_cache_job import get_cached_metrics
         metrics = await loop.run_in_executor(None, get_cached_metrics, symbol)
 
     if not metrics:
-        raise HTTPException(status_code=404, detail=f"No metrics found for {symbol}")
+        # Last resort: live fetch from yfinance (covers ETFs and uncached stocks)
+        from app.jobs.stock_cache_job import _fetch_one
+        stock_info = get_stock_by_symbol(symbol) or {}
+        metrics = await loop.run_in_executor(
+            None, _fetch_one,
+            symbol,
+            stock_info.get("name", symbol),
+            stock_info.get("sector", ""),
+        )
+
+    if not metrics:
+        raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
 
     price = live["live_price"] or metrics.get("price")
     prev  = live["prev_close"]
@@ -326,6 +336,43 @@ async def get_stock_metrics_endpoint(symbol: str):
             "change_pct": change_pct,
         },
     }
+
+
+@router.get("/{symbol}/info", summary="Get Company / ETF Profile")
+async def get_stock_info_endpoint(symbol: str):
+    """
+    Returns company profile: description, sector, industry, website,
+    employees, address. For ETFs returns whatever yfinance has.
+    """
+    loop = asyncio.get_event_loop()
+
+    def _fetch():
+        try:
+            info = yf.Ticker(symbol).info
+            return {
+                "longName":             info.get("longName"),
+                "longBusinessSummary":  info.get("longBusinessSummary"),
+                "sector":               info.get("sector"),
+                "industry":             info.get("industry"),
+                "website":              info.get("website"),
+                "fullTimeEmployees":    info.get("fullTimeEmployees"),
+                "country":              info.get("country"),
+                "city":                 info.get("city"),
+                "address1":             info.get("address1"),
+                "quoteType":            info.get("quoteType"),
+                "exchange":             info.get("exchange"),
+                "currency":             info.get("currency"),
+                "logo_url":             info.get("logo_url"),
+                # ETF-specific (may be None for Indian ETFs)
+                "category":             info.get("category"),
+                "fundFamily":           info.get("fundFamily"),
+                "totalAssets":          info.get("totalAssets"),
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+
+    profile = await loop.run_in_executor(None, _fetch)
+    return {"success": True, "symbol": symbol, "profile": profile}
 
 
 @router.get("/{symbol}/history", summary="Get Stock Price History")

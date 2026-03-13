@@ -5,6 +5,9 @@ const BASE = '/api/v1/stocks';
 export const getStockMetrics = (symbol) =>
   axios.get(`${BASE}/${encodeURIComponent(symbol)}/metrics`).then(r => r.data);
 
+export const getStockInfo = (symbol) =>
+  axios.get(`${BASE}/${encodeURIComponent(symbol)}/info`).then(r => r.data);
+
 export const getStockHistory = (symbol, period = '3mo') =>
   axios.get(`${BASE}/${encodeURIComponent(symbol)}/history`, { params: { period } }).then(r => r.data);
 

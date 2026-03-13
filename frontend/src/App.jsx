@@ -6,11 +6,9 @@ import ChatPanel from './components/layout/ChatPanel';
 import DashboardPage from './pages/DashboardPage';
 import TechnicalPage from './pages/TechnicalPage';
 import FundamentalPage from './pages/FundamentalPage';
-import SentimentPage from './pages/SentimentPage';
 import ScreenerPage from './pages/ScreenerPage';
 import StockDetailPage from './pages/StockDetailPage';
 import ComparisonPage from './pages/ComparisonPage';
-import ETFPage from './pages/ETFPage';
 import './App.css';
 
 function AppShell() {
@@ -34,12 +32,10 @@ function AppShell() {
           <Routes>
             <Route path="/"              element={<DashboardPage />} />
             <Route path="/screener"      element={<ScreenerPage />} />
-            <Route path="/etf"           element={<ETFPage />} />
             <Route path="/stock/:symbol" element={<StockDetailPage />} />
             <Route path="/compare"       element={<ComparisonPage />} />
             <Route path="/technical"     element={<TechnicalPage />} />
             <Route path="/fundamental"   element={<FundamentalPage />} />
-            <Route path="/sentiment"     element={<SentimentPage />} />
             <Route path="*"              element={<Navigate to="/" replace />} />
           </Routes>
         </main>

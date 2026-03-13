@@ -1911,6 +1911,101 @@
   color: var(--text-tertiary);
 }
 
+/* Tab bar */
+.sdp-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.sdp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: -1px;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.15s;
+}
+.sdp-tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.sdp-tab.active {
+  color: #60a5fa;
+  border-bottom-color: #3b82f6;
+  background: rgba(59,130,246,0.06);
+}
+
+/* Tab content wrapper */
+.sdp-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Analysis form inside tab */
+.sdp-analysis-form-wrap {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+/* ── About / Company Profile card ── */
+.sdp-about-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin-top: 8px;
+}
+.sdp-about-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+.sdp-about-desc {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 16px;
+  /* Limit height and allow expansion later if needed */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sdp-about-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sdp-about-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sdp-about-link {
+  color: #60a5fa;
+  text-decoration: none;
+  border-color: rgba(96,165,250,0.25);
+  background: rgba(96,165,250,0.08);
+}
+.sdp-about-link:hover { text-decoration: underline; }
+
 /* Metrics grid */
 .sdp-metrics-grid {
   display: grid;

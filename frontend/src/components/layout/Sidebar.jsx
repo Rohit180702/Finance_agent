@@ -6,7 +6,6 @@ import {
   Newspaper,
   SlidersHorizontal,
   MessageSquare,
-  Layers,
   GitCompare,
   X,
 } from 'lucide-react';
@@ -14,14 +13,13 @@ import {
 const NAV_WORKSPACE = [
   { to: '/',         icon: LayoutDashboard,  label: 'Dashboard' },
   { to: '/screener', icon: SlidersHorizontal, label: 'Screener' },
-  { to: '/etf',      icon: Layers,            label: 'ETFs' },
   { to: '/compare',  icon: GitCompare,        label: 'Compare' },
 ];
 
 const NAV_ANALYSIS = [
   { to: '/technical',   icon: TrendingUp, label: 'Technical' },
   { to: '/fundamental', icon: BarChart3,  label: 'Fundamental' },
-  { to: '/sentiment',   icon: Newspaper,  label: 'Sentiment' },
+  { to: '/sentiment',   icon: Newspaper,  label: 'Sentiment (soon)' },
 ];
 
 const Sidebar = ({ isOpen, onClose, onChatOpen }) => (
