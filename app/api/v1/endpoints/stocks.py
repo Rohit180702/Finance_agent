@@ -13,6 +13,8 @@ from app.services.stock_service import (
 import yfinance as yf
 import asyncio
 import time
+import anthropic
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -152,6 +154,240 @@ async def search_stocks_endpoint(
         "count": len(results),
         "stocks": results
     }
+
+
+@router.get("/etfs", summary="Get all ETFs")
+async def get_etfs_endpoint(
+    q: str = Query("", description="Optional search query"),
+):
+    """Return all NSE ETFs from the static data file, optionally filtered."""
+    data   = get_all_stocks()
+    etfs   = [s for s in data["all"] if s.get("type") == "etf"]
+    if q:
+        ql = q.lower()
+        etfs = [s for s in etfs if ql in s["symbol"].lower() or ql in s["name"].lower()]
+    return {"success": True, "count": len(etfs), "etfs": etfs}
+
+
+@router.get("/compare", summary="Compare Stocks with AI")
+async def compare_stocks_endpoint(
+    symbols: str = Query(..., description="Comma-separated symbols, max 3 (e.g. RELIANCE.NS,TCS.NS)"),
+):
+    """
+    Fetch fundamental metrics for 2-3 stocks and generate an AI comparison summary.
+    """
+    symbol_list = [s.strip() for s in symbols.split(",") if s.strip()][:3]
+    if len(symbol_list) < 2:
+        raise HTTPException(status_code=400, detail="Provide at least 2 symbols to compare")
+
+    from app.services.screener_service import get_paginated_stocks
+
+    async def _fetch_metrics(sym: str) -> dict | None:
+        rows, _ = await get_paginated_stocks({}, "market_cap_cr", "desc", 0, 1)
+        # get_paginated_stocks doesn't filter by symbol, so query directly
+        from sqlalchemy import text
+        from app.db.engine import SyncSessionLocal
+        loop = asyncio.get_event_loop()
+        def _q():
+            with SyncSessionLocal() as db:
+                row = db.execute(
+                    text("""
+                        SELECT DISTINCT ON (symbol)
+                            symbol, name, sector, price, market_cap_cr,
+                            pe, pb, roe, roa, debt_equity, net_margin,
+                            revenue_growth, dividend_yield, week52_high, week52_low
+                        FROM stock_metrics_history
+                        WHERE symbol = :sym
+                        ORDER BY symbol, snapshot_date DESC
+                    """),
+                    {"sym": sym},
+                ).mappings().first()
+                return dict(row) if row else None
+        return await loop.run_in_executor(None, _q)
+
+    # Fetch metrics for all symbols in parallel
+    tasks = [_fetch_metrics(sym) for sym in symbol_list]
+    results = await asyncio.gather(*tasks)
+    stocks_data = [r for r in results if r is not None]
+
+    if not stocks_data:
+        raise HTTPException(status_code=404, detail="No data found for the given symbols")
+
+    # Build AI comparison prompt
+    def _fmt_metric(v, suffix=""):
+        if v is None:
+            return "N/A"
+        return f"{v:.2f}{suffix}"
+
+    lines = []
+    for s in stocks_data:
+        lines.append(
+            f"**{s['name']} ({s['symbol'].replace('.NS','')})** — {s.get('sector','')}\n"
+            f"  Price: ₹{_fmt_metric(s.get('price'))} | MCap: ₹{_fmt_metric(s.get('market_cap_cr'))}Cr\n"
+            f"  PE: {_fmt_metric(s.get('pe'))} | PB: {_fmt_metric(s.get('pb'))} | ROE: {_fmt_metric(s.get('roe'))}%\n"
+            f"  D/E: {_fmt_metric(s.get('debt_equity'))} | Net Margin: {_fmt_metric(s.get('net_margin'))}% | Rev Growth: {_fmt_metric(s.get('revenue_growth'))}%\n"
+            f"  Div Yield: {_fmt_metric(s.get('dividend_yield'))}% | 52W High: ₹{_fmt_metric(s.get('week52_high'))} | 52W Low: ₹{_fmt_metric(s.get('week52_low'))}"
+        )
+
+    metrics_block = "\n\n".join(lines)
+    prompt = (
+        f"You are an expert Indian stock market analyst. Compare the following stocks and give a structured, "
+        f"insightful analysis. Focus on: valuation (PE/PB), profitability (ROE, margins), growth, debt, and "
+        f"which stock is better for different types of investors (value, growth, income).\n\n"
+        f"{metrics_block}\n\n"
+        f"Structure your response with sections: **Overview**, **Valuation**, **Profitability & Growth**, "
+        f"**Risk (Debt)**, **Verdict**. Be concise but specific. Use INR (₹) where relevant."
+    )
+
+    loop = asyncio.get_event_loop()
+    def _call_claude():
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model=settings.LLM_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return msg.content[0].text
+
+    ai_comparison = await loop.run_in_executor(None, _call_claude)
+
+    return {
+        "success": True,
+        "symbols": symbol_list,
+        "stocks": stocks_data,
+        "ai_comparison": ai_comparison,
+    }
+
+
+@router.get("/{symbol}/metrics", summary="Get Stock Metrics from Cache")
+async def get_stock_metrics_endpoint(symbol: str):
+    """
+    Get fundamental metrics for a stock from the Postgres cache (fast).
+    Falls back to Redis if Postgres is empty.
+    """
+    from sqlalchemy import text
+    from app.db.engine import SyncSessionLocal
+    import json
+
+    loop = asyncio.get_event_loop()
+
+    def _fetch():
+        with SyncSessionLocal() as db:
+            row = db.execute(
+                text("""
+                    SELECT DISTINCT ON (symbol)
+                        symbol, name, sector, price, market_cap_cr,
+                        pe, pb, roe, roa, debt_equity, net_margin,
+                        revenue_growth, dividend_yield, week52_high, week52_low,
+                        snapshot_date
+                    FROM stock_metrics_history
+                    WHERE symbol = :sym
+                    ORDER BY symbol, snapshot_date DESC
+                """),
+                {"sym": symbol},
+            ).mappings().first()
+            return dict(row) if row else None
+
+    metrics = await loop.run_in_executor(None, _fetch)
+
+    # Also fetch live price + change via fast_info
+    def _live():
+        try:
+            fi = yf.Ticker(symbol).fast_info
+            return {
+                "live_price": round(fi.last_price, 2) if fi.last_price else None,
+                "prev_close": round(fi.previous_close, 2) if fi.previous_close else None,
+            }
+        except Exception:
+            return {"live_price": None, "prev_close": None}
+
+    live = await loop.run_in_executor(None, _live)
+
+    if not metrics:
+        # Redis fallback
+        from app.jobs.stock_cache_job import get_cached_metrics
+        metrics = await loop.run_in_executor(None, get_cached_metrics, symbol)
+
+    if not metrics:
+        raise HTTPException(status_code=404, detail=f"No metrics found for {symbol}")
+
+    price = live["live_price"] or metrics.get("price")
+    prev  = live["prev_close"]
+    change     = round(price - prev, 2)        if (price and prev) else None
+    change_pct = round(change / prev * 100, 2) if (change and prev) else None
+
+    return {
+        "success": True,
+        "symbol": symbol,
+        "metrics": {
+            **metrics,
+            "price":      price,
+            "change":     change,
+            "change_pct": change_pct,
+        },
+    }
+
+
+@router.get("/{symbol}/history", summary="Get Stock Price History")
+async def get_stock_history_endpoint(
+    symbol: str,
+    period: str = Query("3mo", description="Period: 1d, 5d, 1mo, 6mo, ytd, 1y, max"),
+):
+    """
+    Get OHLCV price history for a stock (used for the price chart).
+    Uses intraday intervals for short periods, daily for longer ones.
+    """
+    # Map period → yfinance interval
+    INTERVAL_MAP = {
+        "1d":  "5m",
+        "5d":  "1h",
+        "1mo": "1d",
+        "3mo": "1d",
+        "6mo": "1d",
+        "ytd": "1d",
+        "1y":  "1d",
+        "max": "1wk",
+    }
+    if period not in INTERVAL_MAP:
+        period = "3mo"
+    interval = INTERVAL_MAP[period]
+
+    loop = asyncio.get_event_loop()
+
+    def _download():
+        df = yf.download(symbol, period=period, interval=interval,
+                         auto_adjust=True, progress=False)
+        if df.empty:
+            return []
+        df = df.reset_index()
+
+        # Flatten MultiIndex columns (yfinance returns MultiIndex when one symbol)
+        if isinstance(df.columns, __import__('pandas').MultiIndex):
+            df.columns = [col[0] for col in df.columns]
+
+        rows = []
+        date_col = "Datetime" if "Datetime" in df.columns else "Date"
+        for _, row in df.iterrows():
+            try:
+                ts = row[date_col]
+                # For intraday data include time; for daily just date
+                date_str = str(ts)[:16] if interval in ("5m", "1h") else str(ts)[:10]
+                rows.append({
+                    "date":   date_str,
+                    "open":   round(float(row["Open"]),  2),
+                    "high":   round(float(row["High"]),  2),
+                    "low":    round(float(row["Low"]),   2),
+                    "close":  round(float(row["Close"]), 2),
+                    "volume": int(row["Volume"]) if row.get("Volume") else 0,
+                })
+            except Exception:
+                pass
+        return rows
+
+    history = await loop.run_in_executor(None, _download)
+
+    return {"success": True, "symbol": symbol, "period": period,
+            "interval": interval, "history": history}
 
 
 @router.get("/{symbol}", summary="Get Stock by Symbol")
