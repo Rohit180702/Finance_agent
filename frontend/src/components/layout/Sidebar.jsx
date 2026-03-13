@@ -6,12 +6,16 @@ import {
   Newspaper,
   SlidersHorizontal,
   MessageSquare,
+  Layers,
+  GitCompare,
   X,
 } from 'lucide-react';
 
 const NAV_WORKSPACE = [
   { to: '/',         icon: LayoutDashboard,  label: 'Dashboard' },
-  { to: '/screener', icon: SlidersHorizontal, label: 'Screener', soon: true },
+  { to: '/screener', icon: SlidersHorizontal, label: 'Screener' },
+  { to: '/etf',      icon: Layers,            label: 'ETFs' },
+  { to: '/compare',  icon: GitCompare,        label: 'Compare' },
 ];
 
 const NAV_ANALYSIS = [

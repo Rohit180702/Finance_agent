@@ -11,8 +11,8 @@ const analysisOptions = [
   { value: 'income', label: 'Income Statement — Revenue, Margins & Earnings' },
 ];
 
-const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange, isCached }) => {
-  const [symbol, setSymbol] = useState('');
+const FundamentalForm = ({ onSubmit, loading, analysisType, onAnalysisTypeChange, isCached, defaultSymbol = '' }) => {
+  const [symbol, setSymbol] = useState(defaultSymbol);
 
   return (
     <form
