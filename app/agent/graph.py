@@ -1,9 +1,7 @@
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.checkpoint.redis import RedisSaver
 from langchain_core.messages import SystemMessage
 from app.llm.claude import model, tools
-from app.core.redis_client import get_redis_checkpointer_client
 
 SYSTEM_PROMPT = """You are a specialized Finance Assistant focused exclusively on financial markets, stock analysis, and investment insights.
 
@@ -34,43 +32,53 @@ If asked about non-finance topics, respond with:
 
 Stay focused on finance. Be helpful, accurate, and professional."""
 
+
 def call_model(state: MessagesState):
-  # Add system prompt if not already present
-  messages = state["messages"]
+    messages = state["messages"]
+    if not messages or not isinstance(messages[0], SystemMessage):
+        messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+    model_with_tools = model.bind_tools(tools)
+    response = model_with_tools.invoke(messages)
+    return {"messages": [response]}
 
-  # Check if first message is a system message
-  if not messages or not isinstance(messages[0], SystemMessage):
-    messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
 
-  # Bind tools to the model so it knows what tools it has
-  model_with_tools = model.bind_tools(tools)
+def _get_checkpointer():
+    """
+    Return the best available checkpointer.
+    Priority: Postgres (set by main.py at startup) → Redis fallback
+    """
+    # Postgres checkpointer — set by main.py lifespan, no circular import
+    from app.core.checkpointer import get_checkpointer
+    cp = get_checkpointer()
+    if cp is not None:
+        return cp
 
-  response = model_with_tools.invoke(messages)
-  return {"messages": [response]}
+    # Redis fallback (cold start before lifespan has run, or standalone tests)
+    try:
+        from langgraph.checkpoint.redis import RedisSaver
+        from app.core.redis_client import get_redis_checkpointer_client
+        redis_client = get_redis_checkpointer_client()
+        redis_client.ping()
+        cp = RedisSaver(redis_client=redis_client)
+        cp.setup()
+        print("✅ Agent graph compiled with Redis checkpointer (fallback)")
+        return cp
+    except Exception as e:
+        print(f"❌ No checkpointer available: {e}")
+        return None
+
 
 def create_agent():
-  graph = StateGraph(MessagesState)
+    graph = StateGraph(MessagesState)
+    graph.add_node("agent", call_model)
+    graph.add_node("tools", ToolNode(tools))
+    graph.add_edge(START, "agent")
+    graph.add_conditional_edges("agent", tools_condition)
+    graph.add_edge("tools", "agent")
 
-  graph.add_node("agent", call_model)
-  graph.add_node("tools", ToolNode(tools))
+    checkpointer = _get_checkpointer()
+    if checkpointer:
+        print("✅ Agent graph compiled with checkpointer")
+        return graph.compile(checkpointer=checkpointer)
 
-  graph.add_edge(START, "agent")
-  graph.add_conditional_edges("agent", tools_condition)
-  graph.add_edge("tools", "agent")
-
-  # Add Redis checkpointer for conversation memory
-  # Use Redis client with decode_responses=False (RedisSaver needs bytes)
-  try:
-    redis_client = get_redis_checkpointer_client()
-    redis_client.ping()  # Test connection
-    checkpointer = RedisSaver(redis_client=redis_client)
-
-    # CRITICAL: Must call setup() to initialize internal structures
-    checkpointer.setup()
-
-    print("✅ Agent graph compiled with Redis checkpointer")
-    return graph.compile(checkpointer=checkpointer)
-  except Exception as e:
-    print(f"❌ Redis not available, cannot compile agent: {e}")
-    print("⚠️  Make sure Redis is running: docker-compose up -d redis")
-    raise
+    raise RuntimeError("No checkpointer available. Ensure Postgres or Redis is running.")

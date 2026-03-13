@@ -39,7 +39,18 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
 
-    # Redis Settings (for conversation memory and caching)
+    # Postgres Settings
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+psycopg2://finance_user:finance_pass@localhost:5432/finance_agent",
+    )
+    # Async variant used by SQLAlchemy async engine
+    DATABASE_URL_ASYNC: str = os.getenv(
+        "DATABASE_URL_ASYNC",
+        "postgresql+asyncpg://finance_user:finance_pass@localhost:5432/finance_agent",
+    )
+
+    # Redis Settings (hot cache layer in front of Postgres)
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
