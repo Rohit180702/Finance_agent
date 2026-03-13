@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import config, technical, stocks, chat, fundamental
+from app.api.v1.endpoints import config, technical, stocks, chat, fundamental, screener
 
 api_router = APIRouter()
 
@@ -9,3 +9,4 @@ api_router.include_router(technical.router, prefix="/technical", tags=["Technica
 api_router.include_router(stocks.router, prefix="/stocks", tags=["Stocks"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
 api_router.include_router(fundamental.router, prefix="/fundamental", tags=["Fundamental Analysis"])
+api_router.include_router(screener.router, prefix="/screener", tags=["Screener"])
