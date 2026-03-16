@@ -9,6 +9,7 @@ import FundamentalPage from './pages/FundamentalPage';
 import ScreenerPage from './pages/ScreenerPage';
 import StockDetailPage from './pages/StockDetailPage';
 import ComparisonPage from './pages/ComparisonPage';
+import NewsPage from './pages/NewsPage';
 import './App.css';
 
 function AppShell() {
@@ -34,6 +35,7 @@ function AppShell() {
             <Route path="/screener"      element={<ScreenerPage />} />
             <Route path="/stock/:symbol" element={<StockDetailPage />} />
             <Route path="/compare"       element={<ComparisonPage />} />
+            <Route path="/news"          element={<NewsPage />} />
             <Route path="/technical"     element={<TechnicalPage />} />
             <Route path="/fundamental"   element={<FundamentalPage />} />
             <Route path="*"              element={<Navigate to="/" replace />} />

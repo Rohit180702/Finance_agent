@@ -8,9 +8,9 @@ import ReactMarkdown from 'react-markdown';
 import {
   ArrowLeft, TrendingUp, TrendingDown, BarChart2, GitCompare,
   Brain, Loader2, AlertCircle, LayoutDashboard, Search, X,
-  Globe, Users, MapPin, Building2,
+  Globe, Users, MapPin, Building2, Newspaper, ExternalLink,
 } from 'lucide-react';
-import { getStockMetrics, getStockHistory, compareStocks, searchStocks, getStockInfo } from '../services/stockDetailApi';
+import { getStockMetrics, getStockHistory, compareStocks, searchStocks, getStockInfo, getStockNews } from '../services/stockDetailApi';
 import { useFundamental } from '../hooks/useFundamental';
 import FundamentalForm from '../components/FundamentalAnalysis/FundamentalForm';
 import FundamentalResults from '../components/FundamentalAnalysis/FundamentalResults';
@@ -26,6 +26,7 @@ const PERIODS = [
 
 const TABS = [
   { id: 'overview', label: 'Overview',    icon: LayoutDashboard },
+  { id: 'news',     label: 'News',        icon: Newspaper       },
   { id: 'compare',  label: 'Compare',     icon: GitCompare      },
   { id: 'analysis', label: 'AI Analysis', icon: Brain           },
 ];
@@ -133,6 +134,59 @@ function StockSearch({ onAdd, existing }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// ── Shared news card ───────────────────────────────────────────────────────────
+function NewsCard({ item }) {
+  const date = item.pub_date
+    ? new Date(item.pub_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  return (
+    <a className="news-card" href={item.url} target="_blank" rel="noreferrer">
+      {item.thumbnail && <img className="news-thumb" src={item.thumbnail} alt="" loading="lazy" />}
+      <div className="news-body">
+        <p className="news-title">{item.title}</p>
+        {item.summary && <p className="news-summary">{item.summary}</p>}
+        <div className="news-meta">
+          {item.publisher && <span className="news-publisher">{item.publisher}</span>}
+          {date && <span className="news-date">{date}</span>}
+          <ExternalLink size={11} className="news-ext-icon" />
+        </div>
+      </div>
+    </a>
+  );
+}
+
+// ── News Tab ───────────────────────────────────────────────────────────────────
+function NewsTab({ symbol }) {
+  const [news,    setNews]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    getStockNews(symbol, 15)
+      .then(d => setNews(d.news || []))
+      .catch(() => setError('Could not load news.'))
+      .finally(() => setLoading(false));
+  }, [symbol]);
+
+  if (loading) return (
+    <div className="news-loading"><Loader2 size={22} className="spin" /><p>Loading news…</p></div>
+  );
+  if (error) return (
+    <div className="news-error"><AlertCircle size={16} /> {error}</div>
+  );
+  if (!news.length) return (
+    <div className="news-empty"><Newspaper size={32} /><p>No recent news found for this stock.</p></div>
+  );
+
+  return (
+    <div className="news-list">
+      {news.map((item, i) => <NewsCard key={item.id || i} item={item} />)}
     </div>
   );
 }
@@ -473,6 +527,9 @@ export default function StockDetailPage() {
           )}
         </>
       )}
+
+      {/* ── News tab ── */}
+      {activeTab === 'news' && <NewsTab symbol={symbol} />}
 
       {/* ── Compare tab ── */}
       {activeTab === 'compare' && <CompareTab initialSymbol={symbol} />}

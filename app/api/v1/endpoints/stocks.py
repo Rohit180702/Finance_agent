@@ -375,6 +375,50 @@ async def get_stock_info_endpoint(symbol: str):
     return {"success": True, "symbol": symbol, "profile": profile}
 
 
+@router.get("/{symbol}/news", summary="Get Recent News for a Stock")
+async def get_stock_news_endpoint(
+    symbol: str,
+    limit: int = Query(10, ge=1, le=30),
+):
+    """
+    Returns recent news articles for a stock from Yahoo Finance.
+    """
+    loop = asyncio.get_event_loop()
+
+    def _fetch():
+        try:
+            raw = yf.Ticker(symbol).news or []
+            articles = []
+            for item in raw[:limit]:
+                c = item.get("content", {})
+                if not c:
+                    continue
+                thumb = None
+                resolutions = c.get("thumbnail", {}).get("resolutions", []) if c.get("thumbnail") else []
+                for r in resolutions:
+                    if r.get("tag") == "170x128":
+                        thumb = r.get("url")
+                        break
+                if not thumb and resolutions:
+                    thumb = resolutions[0].get("url")
+
+                articles.append({
+                    "id":        c.get("id"),
+                    "title":     c.get("title"),
+                    "summary":   c.get("summary") or c.get("description") or "",
+                    "publisher": c.get("provider", {}).get("displayName"),
+                    "url":       (c.get("canonicalUrl") or c.get("clickThroughUrl") or {}).get("url"),
+                    "pub_date":  c.get("pubDate"),
+                    "thumbnail": thumb,
+                })
+            return articles
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+
+    articles = await loop.run_in_executor(None, _fetch)
+    return {"success": True, "symbol": symbol, "news": articles}
+
+
 @router.get("/{symbol}/history", summary="Get Stock Price History")
 async def get_stock_history_endpoint(
     symbol: str,

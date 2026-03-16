@@ -13,6 +13,7 @@ import {
 const NAV_WORKSPACE = [
   { to: '/',         icon: LayoutDashboard,  label: 'Dashboard' },
   { to: '/screener', icon: SlidersHorizontal, label: 'Screener' },
+  { to: '/news',     icon: Newspaper,         label: 'News' },
   { to: '/compare',  icon: GitCompare,        label: 'Compare' },
 ];
 

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import {
   TrendingUp, BarChart3, Newspaper,
-  ArrowUpRight, TrendingDown, RefreshCw,
+  ArrowUpRight, TrendingDown, RefreshCw, ExternalLink, Loader2,
 } from 'lucide-react';
 import { useMarketOverview } from '../hooks/useMarketOverview';
 import Skeleton from '../components/ui/Skeleton';
+import { getMarketNews } from '../services/newsApi';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function timeAgo(date) {
@@ -63,6 +65,48 @@ const ACTIONS = [
     color: 'violet',
   },
 ];
+
+// ── Latest news strip (dashboard) ─────────────────────────────────────────────
+function LatestNewsStrip() {
+  const [news,    setNews]    = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMarketNews(0)
+      .then(d => setNews((d.news || []).slice(0, 6)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="dash-news-loading"><Loader2 size={16} className="spin" /> Loading news…</div>
+  );
+  if (!news.length) return null;
+
+  return (
+    <div className="dash-news-list">
+      {news.map((item, i) => {
+        const date = item.pub_date
+          ? new Date(item.pub_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : null;
+        return (
+          <a key={item.id || i} className="dash-news-item" href={item.url} target="_blank" rel="noreferrer">
+            {item.thumbnail && <img className="dash-news-thumb" src={item.thumbnail} alt="" loading="lazy" />}
+            <div className="dash-news-body">
+              <p className="dash-news-title">{item.title}</p>
+              {item.summary && <p className="dash-news-summary">{item.summary.slice(0, 120)}{item.summary.length > 120 ? '…' : ''}</p>}
+              <div className="dash-news-meta">
+                {item.publisher && <span className="dash-news-pub">{item.publisher}</span>}
+                {date && <span className="dash-news-date">{date}</span>}
+                <ExternalLink size={10} />
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Dashboard page ─────────────────────────────────────────────────────────────
 const DashboardPage = () => {
@@ -123,6 +167,15 @@ const DashboardPage = () => {
             ? 'Prices via Yahoo Finance · refreshing every 5s · may lag ~15s behind live NSE'
             : 'Market closed · NSE/BSE open Mon–Fri 09:15–15:30 IST · showing last known prices'}
         </p>
+      </section>
+
+      {/* Latest news */}
+      <section className="dashboard-section">
+        <div className="section-header">
+          <h3 className="section-heading">Latest News</h3>
+          <Link to="/news" className="section-see-all">See all →</Link>
+        </div>
+        <LatestNewsStrip />
       </section>
 
       {/* Quick analysis */}

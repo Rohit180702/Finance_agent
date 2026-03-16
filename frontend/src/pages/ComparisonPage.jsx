@@ -4,8 +4,19 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip as ReTooltip,
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
-import { X, Search, Loader2, Brain, ArrowLeft, GitCompare, AlertCircle } from 'lucide-react';
+import { X, Search, Loader2, Brain, ArrowLeft, GitCompare, AlertCircle, Plus } from 'lucide-react';
 import { compareStocks, searchStocks } from '../services/stockDetailApi';
+
+const QUICK_PICKS = [
+  { symbol: 'RELIANCE.NS', label: 'Reliance' },
+  { symbol: 'TCS.NS',      label: 'TCS' },
+  { symbol: 'HDFCBANK.NS', label: 'HDFC Bank' },
+  { symbol: 'INFY.NS',     label: 'Infosys' },
+  { symbol: 'ICICIBANK.NS',label: 'ICICI Bank' },
+  { symbol: 'WIPRO.NS',    label: 'Wipro' },
+  { symbol: 'SBIN.NS',     label: 'SBI' },
+  { symbol: 'BAJFINANCE.NS',label: 'Bajaj Finance' },
+];
 
 const fmt   = (v, d = 2) => { const n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(d); };
 const fmtCr = (v) => {
@@ -193,8 +204,36 @@ export default function ComparisonPage() {
       </div>
 
       {symbols.length < 2 && !loading && (
-        <div className="cmp-hint">
-          <p>Add at least 2 stocks to compare. Use the search box above.</p>
+        <div className="cmp-empty-state">
+          <GitCompare size={48} className="cmp-empty-icon" />
+          <h2 className="cmp-empty-title">Compare stocks side by side</h2>
+          <p className="cmp-empty-sub">
+            Search for stocks above, or pick from popular ones below. Add 2–3 to compare fundamentals, radar charts, and get an AI summary.
+          </p>
+          <div className="cmp-quick-picks">
+            {QUICK_PICKS.filter(q => !symbols.includes(q.symbol)).map(q => (
+              <button
+                key={q.symbol}
+                className="cmp-quick-btn"
+                onClick={() => addSymbol(q.symbol)}
+              >
+                <Plus size={11} /> {q.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {symbols.length === 1 && !loading && (
+        <div className="cmp-one-more">
+          <p>Good start! Add one more stock to begin comparing.</p>
+          <div className="cmp-quick-picks">
+            {QUICK_PICKS.filter(q => !symbols.includes(q.symbol)).slice(0, 5).map(q => (
+              <button key={q.symbol} className="cmp-quick-btn" onClick={() => addSymbol(q.symbol)}>
+                <Plus size={11} /> {q.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
