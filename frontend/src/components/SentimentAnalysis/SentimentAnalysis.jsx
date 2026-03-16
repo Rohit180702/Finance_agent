@@ -2,66 +2,32 @@ import { useState } from 'react';
 import StockSelector from '../TechnicalAnalysis/StockSelector';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import Select from '../ui/Select';
 import EmptyState from '../ui/EmptyState';
 import ErrorState from '../ui/ErrorState';
 import Skeleton from '../ui/Skeleton';
+import { ExternalLink } from 'lucide-react';
 import { useSentiment } from '../../hooks/useSentiment';
 
-const ranges = [
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: '90d', label: 'Last 90 days' },
-];
-
-const sources = [
-  { value: 'news', label: 'News' },
-  { value: 'social', label: 'Social' },
-  { value: 'both', label: 'Both' },
-];
+const VERDICT_COLOR = { Bullish: '#22c55e', Bearish: '#ef4444', Neutral: '#f59e0b' };
+const NEWS_COLOR    = { Positive: '#22c55e', Negative: '#ef4444', Mixed: '#f59e0b', Neutral: '#9ca3af' };
 
 const SentimentAnalysis = () => {
   const { loading, error, result, analyze } = useSentiment();
   const [symbol, setSymbol] = useState('');
-  const [range, setRange] = useState('30d');
-  const [source, setSource] = useState('both');
 
   return (
     <section className="sentiment-layout">
-      <Card title="Configuration" subtitle="Define market narrative scope and source coverage.">
+      <Card title="Sentiment Analysis" subtitle="AI-powered analysis using recent news, price trend, and analyst ratings.">
         <form
           className="sentiment-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!symbol || loading) return;
-            analyze({ symbol, range, source });
-          }}
+          onSubmit={(e) => { e.preventDefault(); if (!symbol || loading) return; analyze({ symbol }); }}
         >
           <div className="ui-field">
             <span className="ui-field-label">Stock</span>
             <StockSelector value={symbol} onChange={setSymbol} />
           </div>
-
-          <div className="field-grid-2">
-            <Select id="range" label="Time Range" value={range} onChange={(event) => setRange(event.target.value)}>
-              {ranges.map((item) => (
-                <option value={item.value} key={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </Select>
-
-            <Select id="source" label="Data Source" value={source} onChange={(event) => setSource(event.target.value)}>
-              {sources.map((item) => (
-                <option value={item.value} key={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-
           <Button type="submit" disabled={!symbol || loading}>
-            {loading ? 'Analyzing...' : 'Analyze Sentiment'}
+            {loading ? 'Analysing…' : 'Analyse Sentiment'}
           </Button>
         </form>
       </Card>
@@ -69,71 +35,86 @@ const SentimentAnalysis = () => {
       {error && <ErrorState title="Sentiment analysis failed" message={error} />}
 
       {loading && (
-        <Card title="Processing" subtitle="Collecting narrative signals.">
+        <Card title="Processing" subtitle="Fetching news, price data, analyst ratings and calling Claude…">
           <Skeleton className="h-24" />
           <Skeleton className="h-40" />
           <Skeleton className="h-32" />
         </Card>
       )}
 
-      {!loading && !result && (
+      {!loading && !result && !error && (
         <Card>
           <EmptyState
             title="No sentiment report yet"
-            description="Choose a stock, range, and source to compute sentiment positioning."
+            description="Select a stock and click Analyse Sentiment to get an AI-powered report."
           />
         </Card>
       )}
 
       {!loading && result && (
         <div className="sentiment-results-grid">
-          <Card title="Sentiment Score" subtitle={`${result.symbol} | ${result.range} | ${result.source}`}>
+
+          {/* Verdict + Score */}
+          <Card title="Verdict" subtitle={`${result.symbol} · ${result.news_sentiment || ''} news sentiment`}>
             <div className="gauge-wrap">
               <meter className="sentiment-meter" min="0" max="100" value={result.score} />
               <div>
-                <p className="metric-value">{result.score}</p>
-                <p className="metric-label">Composite sentiment score</p>
+                <p className="metric-value" style={{ color: VERDICT_COLOR[result.verdict] }}>
+                  {result.verdict}
+                </p>
+                <p className="metric-label">Score: {result.score} / 100</p>
               </div>
             </div>
-
-            <div className="breakdown-grid">
-              <article>
-                <span>Positive</span>
-                <strong>{result.breakdown.positive}%</strong>
-              </article>
-              <article>
-                <span>Neutral</span>
-                <strong>{result.breakdown.neutral}%</strong>
-              </article>
-              <article>
-                <span>Negative</span>
-                <strong>{result.breakdown.negative}%</strong>
-              </article>
-            </div>
           </Card>
 
-          <Card title="Sentiment Trend" subtitle="Recent tone trajectory.">
-            <div className="trend-chart">
-              {result.trend.map((point, index) => (
-                <div key={`${point}-${index}`} className="trend-bar-wrap">
-                  <progress max="100" value={point} />
-                  <span>D{index + 1}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {/* Drivers */}
+          {result.drivers?.length > 0 && (
+            <Card title="Key Drivers" subtitle="What's supporting the sentiment">
+              <ul className="headline-list" style={{ color: '#22c55e' }}>
+                {result.drivers.map((d, i) => <li key={i}>✓ {d}</li>)}
+              </ul>
+            </Card>
+          )}
 
-          <Card title="Recent Headlines" subtitle="Representative market narrative snippets.">
-            <ul className="headline-list">
-              {result.headlines.map((headline) => (
-                <li key={headline}>{headline}</li>
-              ))}
-            </ul>
-          </Card>
+          {/* Risks */}
+          {result.risks?.length > 0 && (
+            <Card title="Risk Factors" subtitle="What could change the outlook">
+              <ul className="headline-list" style={{ color: '#ef4444' }}>
+                {result.risks.map((r, i) => <li key={i}>⚠ {r}</li>)}
+              </ul>
+            </Card>
+          )}
 
+          {/* AI Summary */}
           <Card title="AI Summary" subtitle={`Updated ${new Date(result.timestamp).toLocaleString()}`}>
             <p className="commentary-panel">{result.summary}</p>
           </Card>
+
+          {/* News Sources */}
+          {result.news_items?.length > 0 && (
+            <Card title="News Sources Used" subtitle="Articles analysed to generate this report">
+              <div className="sent-sources-list">
+                {result.news_items.map((item, i) => (
+                  <a
+                    key={i}
+                    className="sent-source-card"
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <div className="sent-source-meta">
+                      {item.publisher && <span className="sent-source-pub">{item.publisher}</span>}
+                      <span className="sent-source-date">{item.date}</span>
+                    </div>
+                    <p className="sent-source-title">{item.title}</p>
+                    {item.summary && <p className="sent-source-summary">{item.summary}</p>}
+                    <ExternalLink size={11} className="sent-source-ext" />
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
+
         </div>
       )}
     </section>

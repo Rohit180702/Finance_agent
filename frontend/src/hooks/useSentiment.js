@@ -1,65 +1,43 @@
 import { useState } from 'react';
 import { analyzeSentiment } from '../services/sentimentApi';
 
-const clamp = (num, min, max) => Math.max(min, Math.min(max, num));
-
-const hashScore = (input) => {
-  let hash = 0;
-  const text = String(input || '');
-  for (let i = 0; i < text.length; i += 1) {
-    hash = (hash * 31 + text.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-};
-
-const buildBreakdown = (score) => {
-  const positive = clamp(Math.round(40 + score * 0.5), 10, 85);
-  const negative = clamp(Math.round(20 + (100 - score) * 0.4), 5, 70);
-  const neutral = clamp(100 - positive - negative, 5, 80);
-  return { positive, neutral, negative };
-};
-
-const buildHeadlines = (symbol) => [
-  `${symbol} draws institutional attention amid valuation debate`,
-  `Options activity rises around ${symbol} ahead of sector commentary`,
-  `${symbol} sentiment stabilizes as analysts revise near-term outlook`,
-  `${symbol} sees mixed social chatter following recent price action`,
-  `${symbol} news flow points to selective optimism in current cycle`,
-];
-
 export const useSentiment = () => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [error,   setError]   = useState(null);
+  const [result,  setResult]  = useState(null);
 
-  const analyze = async ({ symbol, range, source }) => {
+  const analyze = async ({ symbol }) => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
     try {
-      setLoading(true);
-      setError(null);
+      const data = await analyzeSentiment(symbol);
+      const s    = data.sentiment || {};
+      const raw  = data.raw || {};
 
-      const data = await analyzeSentiment(symbol, range, source);
-      const scoreSeed = hashScore(`${symbol}-${range}-${source}`);
-      const score = 35 + (scoreSeed % 40);
-      const breakdown = buildBreakdown(score);
-      const trend = Array.from({ length: 8 }).map((_, index) => {
-        const variance = ((scoreSeed >> index) % 7) - 3;
-        return clamp(score + variance * 2, 20, 80);
-      });
-
+      // Map backend response to the shape SentimentAnalysis.jsx expects
       setResult({
         symbol,
-        range,
-        source,
-        score,
-        breakdown,
-        trend,
-        summary: data.message?.content || 'No summary generated.',
-        headlines: buildHeadlines(symbol),
-        timestamp: new Date().toISOString(),
+        verdict:        s.verdict,
+        score:          s.score,
+        news_sentiment: s.news_sentiment,
+        drivers:        s.drivers || [],
+        risks:          s.risks   || [],
+        summary:        s.summary || '',
+        // Legacy fields kept for SentimentAnalysis.jsx UI compatibility
+        breakdown: {
+          positive: Math.round((s.score || 50) * 0.8),
+          negative: Math.round((100 - (s.score || 50)) * 0.5),
+          neutral:  Math.round(20),
+        },
+        trend:     Array.from({ length: 8 }, (_, i) => Math.min(100, Math.max(0, (s.score || 50) + (i % 3 - 1) * 5))),
+        headlines: [],
+        analyst:    raw.analyst    || {},
+        news_items: raw.news_items || [],
+        timestamp:  new Date().toISOString(),
       });
     } catch (err) {
-      setError(err.message);
-      setResult(null);
+      setError(err.response?.data?.detail || err.message || 'Sentiment analysis failed.');
     } finally {
       setLoading(false);
     }

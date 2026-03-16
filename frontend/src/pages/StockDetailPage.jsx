@@ -9,8 +9,9 @@ import {
   ArrowLeft, TrendingUp, TrendingDown, BarChart2, GitCompare,
   Brain, Loader2, AlertCircle, LayoutDashboard, Search, X,
   Globe, Users, MapPin, Building2, Newspaper, ExternalLink,
+  Activity, ShieldAlert, ChevronRight,
 } from 'lucide-react';
-import { getStockMetrics, getStockHistory, compareStocks, searchStocks, getStockInfo, getStockNews } from '../services/stockDetailApi';
+import { getStockMetrics, getStockHistory, compareStocks, searchStocks, getStockInfo, getStockNews, getStockSentiment } from '../services/stockDetailApi';
 import { useFundamental } from '../hooks/useFundamental';
 import FundamentalForm from '../components/FundamentalAnalysis/FundamentalForm';
 import FundamentalResults from '../components/FundamentalAnalysis/FundamentalResults';
@@ -25,10 +26,11 @@ const PERIODS = [
 ];
 
 const TABS = [
-  { id: 'overview', label: 'Overview',    icon: LayoutDashboard },
-  { id: 'news',     label: 'News',        icon: Newspaper       },
-  { id: 'compare',  label: 'Compare',     icon: GitCompare      },
-  { id: 'analysis', label: 'AI Analysis', icon: Brain           },
+  { id: 'overview',   label: 'Overview',    icon: LayoutDashboard },
+  { id: 'news',       label: 'News',        icon: Newspaper       },
+  { id: 'sentiment',  label: 'Sentiment',   icon: Activity        },
+  { id: 'compare',    label: 'Compare',     icon: GitCompare      },
+  { id: 'analysis',   label: 'AI Analysis', icon: Brain           },
 ];
 
 const CHIP_COLORS   = ['#3b82f6', '#a855f7', '#f59e0b'];
@@ -187,6 +189,173 @@ function NewsTab({ symbol }) {
   return (
     <div className="news-list">
       {news.map((item, i) => <NewsCard key={item.id || i} item={item} />)}
+    </div>
+  );
+}
+
+// ── Sentiment Tab ──────────────────────────────────────────────────────────────
+const VERDICT_CONFIG = {
+  Bullish:  { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   border: 'rgba(34,197,94,0.3)'   },
+  Bearish:  { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)'   },
+  Neutral:  { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)'  },
+};
+const NEWS_SENTIMENT_COLOR = { Positive: '#22c55e', Negative: '#ef4444', Mixed: '#f59e0b', Neutral: '#9ca3af' };
+
+function SentimentTab({ symbol }) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
+  const [ran,     setRan]     = useState(false);
+
+  const run = () => {
+    setLoading(true); setError(null);
+    getStockSentiment(symbol)
+      .then(d => { setData(d); setRan(true); })
+      .catch(e => setError(e.response?.data?.detail || 'Sentiment analysis failed.'))
+      .finally(() => setLoading(false));
+  };
+
+  if (!ran && !loading) return (
+    <div className="sent-idle">
+      <Activity size={44} className="sent-idle-icon" />
+      <h3 className="sent-idle-title">AI Sentiment Analysis</h3>
+      <p className="sent-idle-sub">
+        Analyses recent news, price trend, and analyst ratings using Claude to determine market sentiment.
+      </p>
+      <button className="sent-run-btn" onClick={run}>
+        <Activity size={14} /> Run Sentiment Analysis
+      </button>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="sent-loading">
+      <Loader2 size={28} className="spin" />
+      <p>Analysing news, price trend, and analyst data…</p>
+      <span>This takes 10–20 seconds</span>
+    </div>
+  );
+
+  if (error) return (
+    <div className="sent-error">
+      <AlertCircle size={16} /> {error}
+      <button className="sent-retry-btn" onClick={run}>Retry</button>
+    </div>
+  );
+
+  const s   = data?.sentiment || {};
+  const raw = data?.raw || {};
+  const vc  = VERDICT_CONFIG[s.verdict] || VERDICT_CONFIG.Neutral;
+
+  return (
+    <div className="sent-result">
+
+      {/* ── Score + Verdict ── */}
+      <div className="sent-header-row">
+        <div className="sent-verdict-card" style={{ background: vc.bg, borderColor: vc.border }}>
+          <span className="sent-verdict-label" style={{ color: vc.color }}>{s.verdict}</span>
+          <div className="sent-score-wrap">
+            <span className="sent-score" style={{ color: vc.color }}>{s.score}</span>
+            <span className="sent-score-max">/100</span>
+          </div>
+          <div className="sent-score-bar-wrap">
+            <div className="sent-score-bar" style={{ width: `${s.score}%`, background: vc.color }} />
+          </div>
+        </div>
+
+        <div className="sent-meta-cards">
+          <div className="sent-meta-card">
+            <span className="sent-meta-label">News Sentiment</span>
+            <span className="sent-meta-value" style={{ color: NEWS_SENTIMENT_COLOR[s.news_sentiment] || '#9ca3af' }}>
+              {s.news_sentiment || '—'}
+            </span>
+          </div>
+          <div className="sent-meta-card">
+            <span className="sent-meta-label">News Analysed</span>
+            <span className="sent-meta-value">{raw.news_count ?? '—'} articles</span>
+          </div>
+          {raw.analyst?.target_mean && (
+            <div className="sent-meta-card">
+              <span className="sent-meta-label">Analyst Target</span>
+              <span className="sent-meta-value">₹{raw.analyst.target_mean}</span>
+            </div>
+          )}
+          {raw.analyst?.buy != null && (
+            <div className="sent-meta-card">
+              <span className="sent-meta-label">Analyst Ratings</span>
+              <span className="sent-meta-value" style={{ color: '#22c55e' }}>
+                {(raw.analyst.strong_buy || 0) + (raw.analyst.buy || 0)} Buy
+                &nbsp;·&nbsp;
+                <span style={{ color: '#9ca3af' }}>{raw.analyst.hold || 0} Hold</span>
+                &nbsp;·&nbsp;
+                <span style={{ color: '#ef4444' }}>{(raw.analyst.sell || 0) + (raw.analyst.strong_sell || 0)} Sell</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Drivers ── */}
+      {s.drivers?.length > 0 && (
+        <div className="sent-section">
+          <h4 className="sent-section-title"><TrendingUp size={14} /> Key Drivers</h4>
+          <ul className="sent-list sent-list--positive">
+            {s.drivers.map((d, i) => (
+              <li key={i}><ChevronRight size={12} />{d}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── Risks ── */}
+      {s.risks?.length > 0 && (
+        <div className="sent-section">
+          <h4 className="sent-section-title"><ShieldAlert size={14} /> Risk Factors</h4>
+          <ul className="sent-list sent-list--negative">
+            {s.risks.map((r, i) => (
+              <li key={i}><ChevronRight size={12} />{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── AI Summary ── */}
+      {s.summary && (
+        <div className="sent-section">
+          <h4 className="sent-section-title"><Brain size={14} /> AI Summary</h4>
+          <p className="sent-summary">{s.summary}</p>
+        </div>
+      )}
+
+      {/* ── News Sources ── */}
+      {raw.news_items?.length > 0 && (
+        <div className="sent-section">
+          <h4 className="sent-section-title"><Newspaper size={14} /> News Sources Used</h4>
+          <div className="sent-sources-list">
+            {raw.news_items.map((item, i) => (
+              <a
+                key={i}
+                className="sent-source-card"
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <div className="sent-source-meta">
+                  {item.publisher && <span className="sent-source-pub">{item.publisher}</span>}
+                  <span className="sent-source-date">{item.date}</span>
+                </div>
+                <p className="sent-source-title">{item.title}</p>
+                {item.summary && <p className="sent-source-summary">{item.summary}</p>}
+                <ExternalLink size={11} className="sent-source-ext" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button className="sent-rerun-btn" onClick={run} disabled={loading}>
+        <Activity size={12} /> Re-analyse
+      </button>
     </div>
   );
 }
@@ -530,6 +699,9 @@ export default function StockDetailPage() {
 
       {/* ── News tab ── */}
       {activeTab === 'news' && <NewsTab symbol={symbol} />}
+
+      {/* ── Sentiment tab ── */}
+      {activeTab === 'sentiment' && <SentimentTab symbol={symbol} />}
 
       {/* ── Compare tab ── */}
       {activeTab === 'compare' && <CompareTab initialSymbol={symbol} />}

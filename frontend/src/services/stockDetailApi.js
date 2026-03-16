@@ -11,6 +11,9 @@ export const getStockInfo = (symbol) =>
 export const getStockNews = (symbol, limit = 10) =>
   axios.get(`${BASE}/${encodeURIComponent(symbol)}/news`, { params: { limit } }).then(r => r.data);
 
+export const getStockSentiment = (symbol) =>
+  axios.get(`${BASE}/${encodeURIComponent(symbol)}/sentiment`).then(r => r.data);
+
 export const getStockHistory = (symbol, period = '3mo') =>
   axios.get(`${BASE}/${encodeURIComponent(symbol)}/history`, { params: { period } }).then(r => r.data);
 
