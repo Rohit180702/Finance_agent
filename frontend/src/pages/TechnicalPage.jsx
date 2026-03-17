@@ -1,4 +1,5 @@
 import { useIndicator } from '../hooks/useIndicator';
+import './TechnicalPage.css';
 import Card from '../components/ui/Card';
 import ErrorState from '../components/ui/ErrorState';
 import IndicatorForm from '../components/TechnicalAnalysis/IndicatorForm';

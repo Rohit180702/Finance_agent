@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Star, SlidersHorizontal } from 'lucide-react';
 import WatchlistCard from '../components/Watchlist/WatchlistCard';
+import './Dashboard.css';
 
 const WatchlistPage = () => (
   <div className="watchlist-page">

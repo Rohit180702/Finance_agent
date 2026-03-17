@@ -2,8 +2,11 @@
 LangGraph workflow for parallel fundamental analysis.
 """
 
+import logging
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.redis import RedisSaver
+
+logger = logging.getLogger(__name__)
 from app.agent.fundamental.state import FundamentalAnalysisState
 from app.agent.tools.fundamental_ratios import get_fundamental_ratios
 from app.agent.tools.fundamental_cashflow import get_cashflow_statement
@@ -247,7 +250,7 @@ Rules:
         response = llm.invoke(prompt)
         consolidated_report = response.content
     except Exception as e:
-        print(f"⚠️  LLM call failed in consolidator, falling back to simple report: {e}")
+        logger.warning("LLM call failed in consolidator, falling back to simple report: %s", e)
         consolidated_report = _build_fallback_report(symbol, state)
 
     return {
@@ -293,8 +296,8 @@ def create_fundamental_analysis_graph():
         # CRITICAL: Must call setup() to initialize internal structures
         checkpointer.setup()
 
-        print("✅ Fundamental analysis graph compiled with Redis checkpointer")
+        logger.info("Fundamental analysis graph compiled with Redis checkpointer")
         return workflow.compile(checkpointer=checkpointer)
     except Exception as e:
-        print(f"⚠️  Redis not available, compiling without checkpointer: {e}")
+        logger.warning("Redis not available, compiling without checkpointer: %s", e)
         return workflow.compile()

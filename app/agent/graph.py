@@ -1,7 +1,10 @@
+import logging
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
 from app.llm.claude import model, tools
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are an AI-powered investment research assistant for Indian stock markets.
 You guide users through the full stock analysis workflow — from discovery to deep-dive to decision.
@@ -75,10 +78,10 @@ def _get_checkpointer():
     try:
         from langgraph.checkpoint.memory import MemorySaver
         cp = MemorySaver()
-        print("✅ Agent graph compiled with MemorySaver (cold-start fallback)")
+        logger.info("Agent graph using MemorySaver (cold-start fallback)")
         return cp
     except Exception as e:
-        print(f"❌ No checkpointer available: {e}")
+        logger.error("No checkpointer available: %s", e)
         return None
 
 
@@ -92,7 +95,7 @@ def create_agent():
 
     checkpointer = _get_checkpointer()
     if checkpointer:
-        print("✅ Agent graph compiled with checkpointer")
+        logger.info("Agent graph compiled with checkpointer: %s", type(checkpointer).__name__)
         return graph.compile(checkpointer=checkpointer)
 
     raise RuntimeError("No checkpointer available. Ensure Postgres or Redis is running.")

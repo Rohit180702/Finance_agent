@@ -13,6 +13,7 @@ import ComparisonPage from './pages/ComparisonPage';
 import NewsPage from './pages/NewsPage';
 import WatchlistPage from './pages/WatchlistPage';
 import './App.css';
+import './components/ui/ui.css';
 
 function AppShell() {
   const [chatOpen, setChatOpen]       = useState(false);

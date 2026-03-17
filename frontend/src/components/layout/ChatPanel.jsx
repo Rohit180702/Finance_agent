@@ -1,4 +1,5 @@
 import { X, MessageSquare } from 'lucide-react';
+import './ChatPanel.css';
 import Chat from '../Chat/Chat';
 
 const ChatPanel = ({ isOpen, onClose }) => (

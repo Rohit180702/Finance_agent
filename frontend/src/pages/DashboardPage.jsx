@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import './Dashboard.css';
 import { useEffect, useState } from 'react';
 import {
   TrendingUp, BarChart3, Newspaper,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import './ScreenerPage.css';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowUpDown, ArrowUp, ArrowDown, Loader2, RefreshCw, X, Database, GitCompare, Star } from 'lucide-react';
 import { useScreener, PRESETS } from '../hooks/useScreener';

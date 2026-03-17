@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import './TopBar.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, MessageSquare, Search, X } from 'lucide-react';
 import { isMarketOpen } from '../../hooks/useMarketOverview';

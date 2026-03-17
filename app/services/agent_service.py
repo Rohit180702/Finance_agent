@@ -1,8 +1,11 @@
-from typing import Dict, Any, List, AsyncGenerator
-from app.agent.graph import create_agent
+import logging
 import uuid
 import json
 import traceback
+from typing import Dict, Any, List, AsyncGenerator
+from app.agent.graph import create_agent
+
+logger = logging.getLogger(__name__)
 
 
 class AgentService:
@@ -28,15 +31,10 @@ class AgentService:
             # Configure with the session's thread_id
             config = {"configurable": {"thread_id": session_id}}
 
-            # Debug: Print full traceback on error
-            import traceback
             try:
-                # Get the current state from the checkpointer (async checkpointer requires aget_state)
                 state = await self.agent.aget_state(config)
             except Exception as e:
-                print(f"Error in get_state: {e}")
-                print(f"Full traceback:")
-                traceback.print_exc()
+                logger.error("Error in get_state: %s", e, exc_info=True)
                 raise
 
             # Extract messages from state
@@ -66,9 +64,7 @@ class AgentService:
             return messages_list
 
         except Exception as e:
-            # If there's an error retrieving history, return empty list
-            # This allows the conversation to continue even if history retrieval fails
-            print(f"Error retrieving conversation history: {str(e)}")
+            logger.warning("Error retrieving conversation history: %s", e)
             return []
 
     async def invoke_chat(self, message: str, session_id: str = None) -> Dict[str, Any]:
@@ -89,15 +85,6 @@ class AgentService:
 
             # Configure the agent with thread_id for persistence
             config = {"configurable": {"thread_id": session_id}}
-
-            # Debug: Check checkpointer
-            if hasattr(self.agent, 'checkpointer') and self.agent.checkpointer:
-                if hasattr(self.agent.checkpointer, 'redis_client'):
-                    print(f"DEBUG: Checkpointer redis_client = {self.agent.checkpointer.redis_client}")
-                else:
-                    print(f"DEBUG: Checkpointer has no redis_client attribute")
-            else:
-                print(f"DEBUG: Agent has no checkpointer!")
 
             # Invoke the agent with just the current message
             # Async checkpointer requires ainvoke

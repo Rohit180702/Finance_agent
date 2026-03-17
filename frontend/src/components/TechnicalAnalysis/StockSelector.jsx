@@ -21,13 +21,6 @@ const StockSelector = ({ value, onChange }) => {
         const popular = await popularRes.json();
         const all = await allRes.json();
 
-        console.log('📊 Stocks loaded:', {
-          popularCount: popular.stocks?.length || 0,
-          allCount: all.stocks?.length || 0,
-          popularSample: popular.stocks?.[0],
-          allSample: all.stocks?.[0],
-        });
-
         setStocks({
           popular: popular.stocks || [],
           all: all.stocks || [],
@@ -64,10 +57,6 @@ const StockSelector = ({ value, onChange }) => {
         popular: stocks.popular.slice(0, 12),
         all: stocks.all.slice(0, 30),
       };
-      console.log('🔍 Filtered stocks (no search):', {
-        popularCount: result.popular.length,
-        allCount: result.all.length,
-      });
       return result;
     }
 
@@ -80,9 +69,6 @@ const StockSelector = ({ value, onChange }) => {
       popular: [],
       all: allResults.slice(0, 40),
     };
-    console.log('🔍 Filtered stocks (search:', term, '):', {
-      allCount: result.all.length,
-    });
     return result;
   }, [stocks, search]);
 

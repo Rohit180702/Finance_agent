@@ -2,9 +2,12 @@
 Redis client singleton for conversation memory and caching.
 """
 
+import logging
 import redis
 from typing import Optional
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class RedisClient:
@@ -42,10 +45,9 @@ class RedisClient:
                 # Test connection
                 try:
                     cls._instance.ping()
-                    print(f"✅ Redis connected: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                    logger.info("Redis connected: %s:%s", settings.REDIS_HOST, settings.REDIS_PORT)
                 except redis.ConnectionError as e:
-                    print(f"❌ Redis connection failed: {e}")
-                    print("⚠️  Make sure Redis is running: docker-compose up -d redis")
+                    logger.error("Redis connection failed: %s", e)
                     raise
 
             return cls._instance
@@ -66,10 +68,9 @@ class RedisClient:
                 # Test connection
                 try:
                     cls._checkpointer_instance.ping()
-                    print(f"✅ Redis checkpointer connected: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                    logger.info("Redis checkpointer connected: %s:%s", settings.REDIS_HOST, settings.REDIS_PORT)
                 except redis.ConnectionError as e:
-                    print(f"❌ Redis checkpointer connection failed: {e}")
-                    print("⚠️  Make sure Redis is running: docker-compose up -d redis")
+                    logger.error("Redis checkpointer connection failed: %s", e)
                     raise
 
             return cls._checkpointer_instance

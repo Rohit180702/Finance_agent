@@ -1,0 +1,173 @@
+   ETF PAGE  (.etf-*)
+───────────────────────────────────────────────────────────────────────────── */
+
+.etf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.etf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.etf-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+.etf-subtitle { font-size: 13px; color: var(--text-tertiary); margin: 0; }
+
+.etf-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 260px;
+  transition: border-color 0.15s;
+}
+.etf-search-box:focus-within { border-color: rgba(59,130,246,0.5); }
+.etf-search-icon { color: var(--text-tertiary); flex-shrink: 0; }
+.etf-search-input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+.etf-search-input::placeholder { color: var(--text-tertiary); }
+
+/* Category tabs */
+.etf-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.etf-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.etf-tab:hover { background: var(--surface-2); color: var(--text-primary); }
+.etf-tab.active {
+  background: rgba(59,130,246,0.12);
+  border-color: rgba(59,130,246,0.4);
+  color: #60a5fa;
+}
+.etf-tab-count {
+  font-size: 11px;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: var(--text-tertiary);
+}
+
+/* Grid */
+.etf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.etf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.etf-card:hover {
+  border-color: rgba(59,130,246,0.35);
+  background: var(--surface-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.etf-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.etf-sym-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+.etf-cat-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.etf-card-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+  flex: 1;
+}
+
+.etf-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.etf-isin {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-family: monospace;
+}
+.etf-arrow { color: var(--text-tertiary); }
+.etf-card:hover .etf-arrow { color: #60a5fa; }
+
+/* Loading / empty / showing */
+.etf-loading {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 80px 20px; color: var(--text-tertiary);
+}
+.etf-empty {
+  text-align: center; padding: 80px 20px;
+  color: var(--text-tertiary); font-size: 14px;
+}
+.etf-showing {
+  text-align: center; font-size: 12px;
+  color: var(--text-tertiary); margin: 0;
+}
+
+@media (max-width: 640px) {
+  .etf-grid { grid-template-columns: 1fr; }
+  .etf-header { flex-direction: column; align-items: flex-start; }
+  .etf-search-box { min-width: 100%; width: 100%; }
+}

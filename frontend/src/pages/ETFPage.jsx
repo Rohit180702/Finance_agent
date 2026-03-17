@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import './ETFPage.css';
 import { Link } from 'react-router-dom';
 import { Search, TrendingUp, Loader2, ExternalLink } from 'lucide-react';
 import axios from 'axios';

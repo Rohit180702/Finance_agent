@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import './Comparison.css';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip as ReTooltip,
