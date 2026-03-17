@@ -1,0 +1,87 @@
+.wlm-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #6b7280;
+  padding: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.wlm-empty svg { color: #374151; }
+
+.wlm-empty a {
+  color: #818cf8;
+  text-decoration: none;
+}
+.wlm-empty a:hover { text-decoration: underline; }
+
+/* ── strip ──────────────────────────────────── */
+
+.wlm-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.wlm-strip {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.wlm-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.wlm-chip:hover {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.wlm-sym {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.wlm-price {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.wlm-chg {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.wlm-chg.up { color: #10b981; }
+.wlm-chg.dn { color: #ef4444; }
+
+.wlm-view-all {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.wlm-view-all:hover { color: #818cf8; }

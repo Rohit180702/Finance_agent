@@ -1,0 +1,330 @@
+/* ── tab bar ──────────────────────────────────── */
+
+.wl-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.wl-tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.wl-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #6b7280;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+  max-width: 160px;
+}
+
+.wl-tab:hover { color: #e5e7eb; background: #1f2937; }
+
+.wl-tab.active {
+  color: #e5e7eb;
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.wl-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl-tab-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.8rem;
+  color: #e5e7eb;
+  width: 90px;
+  padding: 0;
+}
+
+.wl-tab-actions {
+  display: flex;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.wl-tab-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 3px;
+  color: #6b7280;
+  transition: color 0.12s;
+}
+
+.wl-tab-btn:hover       { color: #e5e7eb; }
+.wl-tab-btn.danger:hover { color: #ef4444; }
+
+.wl-new-list-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px dashed #374151;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.wl-new-list-btn:hover { color: #818cf8; border-color: #818cf8; }
+
+/* ── empty ────────────────────────────────────── */
+
+.wl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.75rem 1rem;
+  text-align: center;
+}
+
+.wl-empty-icon  { color: #374151; margin-bottom: 0.2rem; }
+.wl-empty-title { font-size: 0.9rem; font-weight: 600; color: #9ca3af; margin: 0; }
+.wl-empty-sub   { font-size: 0.8rem; color: #6b7280; margin: 0; }
+.wl-empty-sub a { color: #818cf8; text-decoration: none; }
+.wl-empty-sub a:hover { text-decoration: underline; }
+
+/* ── top bar ──────────────────────────────────── */
+
+.wl-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.wl-count { font-size: 0.72rem; color: #6b7280; }
+
+.wl-refresh {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.wl-refresh:hover { color: #e5e7eb; }
+.wl-refresh.spinning svg { animation: wl-spin 1s linear infinite; }
+@keyframes wl-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── table ────────────────────────────────────── */
+
+.wl-table-wrap { overflow-x: auto; }
+
+.wl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.wl-table thead th {
+  text-align: left;
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0 0.5rem 0.45rem;
+  border-bottom: 1px solid #1f2937;
+}
+.wl-table thead th.right { text-align: right; }
+
+.wl-row {
+  border-bottom: 1px solid #111827;
+  transition: background 0.1s;
+}
+.wl-row:hover       { background: #111827; }
+.wl-row:last-child  { border-bottom: none; }
+
+.wl-table td {
+  padding: 0.5rem 0.5rem;
+  vertical-align: middle;
+}
+.wl-table td.right { text-align: right; }
+
+.wl-sym-link {
+  font-weight: 700;
+  color: #818cf8;
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+.wl-sym-link:hover { text-decoration: underline; }
+
+.wl-name {
+  color: #d1d5db;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl-price {
+  color: #e5e7eb;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-change {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.2rem;
+}
+.wl-change.up { color: #10b981; }
+.wl-change.dn { color: #ef4444; }
+
+.wl-mcap { color: #9ca3af; font-size: 0.78rem; }
+
+.wl-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.wl-detail-btn {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  color: #6b7280;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.wl-detail-btn:hover { color: #818cf8; }
+
+.wl-remove-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.wl-remove-btn:hover { color: #ef4444; }
+
+/* ── add stock search bar ────────────────────────── */
+
+.wl-add-section {
+  margin-bottom: 1rem;
+}
+
+.wl-add-wrap {
+  position: relative;
+}
+
+.wl-add-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  transition: border-color 0.15s;
+}
+
+.wl-add-input-row:focus-within {
+  border-color: #4f46e5;
+}
+
+.wl-add-icon { color: #4b5563; flex-shrink: 0; }
+
+.wl-add-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #e5e7eb;
+  font-size: 0.83rem;
+}
+
+.wl-add-input::placeholder { color: #4b5563; }
+
+.wl-add-spinner {
+  color: #6b7280;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.wl-add-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.wl-add-result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.wl-add-result:hover { background: #374151; }
+
+.wl-add-sym {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f9fafb;
+  min-width: 4rem;
+}
+
+.wl-add-name {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

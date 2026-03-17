@@ -11,6 +11,7 @@ import ScreenerPage from './pages/ScreenerPage';
 import StockDetailPage from './pages/StockDetailPage';
 import ComparisonPage from './pages/ComparisonPage';
 import NewsPage from './pages/NewsPage';
+import WatchlistPage from './pages/WatchlistPage';
 import './App.css';
 
 function AppShell() {
@@ -40,6 +41,7 @@ function AppShell() {
             <Route path="/technical"     element={<TechnicalPage />} />
             <Route path="/fundamental"   element={<FundamentalPage />} />
             <Route path="/sentiment"     element={<SentimentPage />} />
+            <Route path="/watchlist"     element={<WatchlistPage />} />
             <Route path="*"              element={<Navigate to="/" replace />} />
           </Routes>
         </main>

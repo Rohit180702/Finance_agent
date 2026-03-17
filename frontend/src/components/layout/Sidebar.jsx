@@ -7,14 +7,16 @@ import {
   SlidersHorizontal,
   MessageSquare,
   GitCompare,
+  Star,
   X,
 } from 'lucide-react';
 
 const NAV_WORKSPACE = [
-  { to: '/',         icon: LayoutDashboard,  label: 'Dashboard' },
-  { to: '/screener', icon: SlidersHorizontal, label: 'Screener' },
-  { to: '/news',     icon: Newspaper,         label: 'News' },
-  { to: '/compare',  icon: GitCompare,        label: 'Compare' },
+  { to: '/',          icon: LayoutDashboard,  label: 'Dashboard' },
+  { to: '/watchlist', icon: Star,             label: 'Watchlist' },
+  { to: '/screener',  icon: SlidersHorizontal, label: 'Screener' },
+  { to: '/news',      icon: Newspaper,         label: 'News' },
+  { to: '/compare',   icon: GitCompare,        label: 'Compare' },
 ];
 
 const NAV_ANALYSIS = [

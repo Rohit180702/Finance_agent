@@ -9,8 +9,10 @@ import {
   ArrowLeft, TrendingUp, TrendingDown, BarChart2, GitCompare,
   Brain, Loader2, AlertCircle, LayoutDashboard, Search, X,
   Globe, Users, MapPin, Building2, Newspaper, ExternalLink,
-  Activity, ShieldAlert, ChevronRight,
+  Activity, ShieldAlert, ChevronRight, Star,
 } from 'lucide-react';
+import { useWatchlist } from '../hooks/useWatchlist';
+import WatchlistPopover from '../components/Watchlist/WatchlistPopover';
 import { getStockMetrics, getStockHistory, compareStocks, searchStocks, getStockInfo, getStockNews, getStockSentiment } from '../services/stockDetailApi';
 import { useFundamental } from '../hooks/useFundamental';
 import FundamentalForm from '../components/FundamentalAnalysis/FundamentalForm';
@@ -507,6 +509,10 @@ function AnalysisTab({ symbol }) {
 export default function StockDetailPage() {
   const { symbol } = useParams();
   const navigate   = useNavigate();
+  const { isWatchedInAny } = useWatchlist();
+  const watched = isWatchedInAny(symbol);
+  const [watchPopoverOpen, setWatchPopoverOpen] = useState(false);
+  const watchBtnRef = useRef(null);
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [metrics,      setMetrics]      = useState(null);
@@ -592,6 +598,24 @@ export default function StockDetailPage() {
             {isUp?'+':''}{fmt(m.change)} ({isUp?'+':''}{fmt(m.change_pct)}%)
           </span>
           <span className="sdp-mcap">{fmtCr(m.market_cap_cr)}</span>
+          <div style={{ position: 'relative' }}>
+            <button
+              ref={watchBtnRef}
+              className={`sdp-watch-btn${watched ? ' watched' : ''}`}
+              onClick={() => setWatchPopoverOpen((o) => !o)}
+              title="Add to watchlist"
+            >
+              <Star size={14} fill={watched ? 'currentColor' : 'none'} />
+              {watched ? 'Watching' : 'Watch'}
+            </button>
+            {watchPopoverOpen && (
+              <WatchlistPopover
+                symbol={symbol}
+                anchorRef={watchBtnRef}
+                onClose={() => setWatchPopoverOpen(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
 

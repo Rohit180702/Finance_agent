@@ -1,0 +1,138 @@
+.wlp-popover {
+  position: absolute;
+  z-index: 200;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 220px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 0.5rem 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: wlp-in 0.12s ease-out;
+}
+
+@keyframes wlp-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wlp-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0 0.75rem 0.4rem;
+  margin: 0;
+  border-bottom: 1px solid #374151;
+}
+
+.wlp-list {
+  list-style: none;
+  margin: 0.25rem 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.wlp-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
+
+.wlp-item:hover { background: #374151; }
+
+.wlp-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+
+.wlp-check.checked {
+  background: #818cf8;
+  border-color: #818cf8;
+  color: white;
+}
+
+.wlp-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wlp-count {
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+/* ── footer ─────────────────────────────────── */
+
+.wlp-footer {
+  padding: 0.4rem 0.75rem 0.25rem;
+  border-top: 1px solid #374151;
+  margin-top: 0.25rem;
+}
+
+.wlp-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #818cf8;
+  font-size: 0.82rem;
+  padding: 0.2rem 0;
+  transition: color 0.12s;
+}
+
+.wlp-new-btn:hover { color: #a5b4fc; }
+
+.wlp-new-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.wlp-new-input {
+  flex: 1;
+  background: #111827;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  color: #e5e7eb;
+  outline: none;
+}
+
+.wlp-new-input:focus { border-color: #818cf8; }
+
+.wlp-new-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: #818cf8;
+  color: white;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wlp-new-confirm:hover { background: #6366f1; }

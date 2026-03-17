@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowUpDown, ArrowUp, ArrowDown, Loader2, RefreshCw, X, Database, GitCompare } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Loader2, RefreshCw, X, Database, GitCompare, Star } from 'lucide-react';
 import { useScreener, PRESETS } from '../hooks/useScreener';
 import { getCacheStatus } from '../services/screenerApi';
+import { useWatchlist } from '../hooks/useWatchlist';
+import WatchlistPopover from '../components/Watchlist/WatchlistPopover';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt  = (v, d = 2) => { const n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(d); };
@@ -45,6 +47,9 @@ const ScreenerPage = () => {
   const sentinelRef = useRef(null);
   const [cacheStatus, setCacheStatus] = useState(null);
   const [showMore, setShowMore] = useState(false);
+  const { isWatchedInAny } = useWatchlist();
+  const [openPopover, setOpenPopover] = useState(null); // symbol string or null
+  const starRefs = useRef({});
 
   const {
     stocks, total, loading, loadingMore, error, hasMore,
@@ -195,7 +200,22 @@ const ScreenerPage = () => {
                   <td className="stbl-td right">{fmt(s.net_margin)}%</td>
                   <td className={`stbl-td right${parseFloat(s.revenue_growth) > 15 ? ' good' : parseFloat(s.revenue_growth) < 0 ? ' warn' : ''}`}>{fmt(s.revenue_growth)}%</td>
                   <td className="stbl-td right">{fmt(s.dividend_yield)}%</td>
-                  <td className="stbl-td stbl-actions">
+                  <td className="stbl-td stbl-actions" style={{ position: 'relative' }}>
+                    <button
+                      ref={(el) => { starRefs.current[s.symbol] = el; }}
+                      className={`watch-btn${isWatchedInAny(s.symbol) ? ' watched' : ''}`}
+                      onClick={() => setOpenPopover((p) => p === s.symbol ? null : s.symbol)}
+                      title="Add to watchlist"
+                    >
+                      <Star size={13} fill={isWatchedInAny(s.symbol) ? 'currentColor' : 'none'} />
+                    </button>
+                    {openPopover === s.symbol && (
+                      <WatchlistPopover
+                        symbol={s.symbol}
+                        anchorRef={{ current: starRefs.current[s.symbol] }}
+                        onClose={() => setOpenPopover(null)}
+                      />
+                    )}
                     <button className="analyze-btn" onClick={() => navigate(`/fundamental?symbol=${s.symbol}`)}>
                       Analyse
                     </button>
