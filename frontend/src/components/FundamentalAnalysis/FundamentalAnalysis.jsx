@@ -7,7 +7,7 @@ import FundamentalForm from './FundamentalForm';
 import FundamentalResults from './FundamentalResults';
 
 const FundamentalAnalysis = () => {
-  const { loading, error, result, analyze, isCached } = useFundamental();
+  const { loading, error, result, streamingReport, sections, sectionData, sectionCommentary, activeAnalysisSection, phase, analyze, isCached } = useFundamental();
   const [analysisType, setAnalysisType] = useState('all');
   const [currentSymbol, setCurrentSymbol] = useState('');
   const [searchParams] = useSearchParams();
@@ -26,9 +26,9 @@ const FundamentalAnalysis = () => {
     setAnalysisType(newType);
   };
 
-  const handleSubmit = async (formData) => {
+  const handleSubmit = (formData) => {
     setCurrentSymbol(formData.symbol);
-    await analyze(formData.symbol, analysisType);
+    analyze(formData.symbol, analysisType);
   };
 
   return (
@@ -50,6 +50,13 @@ const FundamentalAnalysis = () => {
         result={result}
         loading={loading}
         analysisType={analysisType}
+        streamingReport={streamingReport}
+        sections={sections}
+        sectionData={sectionData}
+        sectionCommentary={sectionCommentary}
+        activeAnalysisSection={activeAnalysisSection}
+        phase={phase}
+        symbol={currentSymbol}
       />
     </section>
   );

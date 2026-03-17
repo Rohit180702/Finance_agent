@@ -12,6 +12,11 @@ const quickPrompts = [
   'Summarize key fundamental risks for HDFCBANK',
 ];
 
+const TOOL_LABELS = {
+  calculate_indicator:  'Running technical indicator…',
+  analyze_fundamentals: 'Fetching fundamental data…',
+};
+
 const formatTime = (iso) => {
   if (!iso) return '';
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -29,17 +34,46 @@ const TrashIcon = () => (
   </svg>
 );
 
+/** Three-dot bouncing indicator shown while waiting for the first token */
+const TypingDots = () => (
+  <article className="chat-message-row is-assistant">
+    <div className="chat-message-bubble chat-loading-bubble">
+      <span /><span /><span />
+    </div>
+  </article>
+);
+
+/** Status pill shown when the agent is calling a tool */
+const ToolStatusBadge = ({ toolStatus }) => {
+  if (!toolStatus) return null;
+  const label = TOOL_LABELS[toolStatus.tool] ?? `Using ${toolStatus.tool}…`;
+  return (
+    <article className="chat-message-row is-assistant">
+      <div className="chat-tool-status">
+        <span className="chat-tool-spinner" aria-hidden="true" />
+        {label}
+      </div>
+    </article>
+  );
+};
+
 const Chat = () => {
-  const { messages, loading, error, sendMessage, clearMessages } = useChat();
+  const { messages, loading, toolStatus, error, sendMessage, clearMessages } = useChat();
   const [input, setInput] = useState('');
   const endRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, toolStatus]);
 
   const isEmpty = messages.length === 0;
   const canSend = input.trim() && !loading;
+
+  // Derive whether the last assistant message is still streaming
+  const lastMsg = messages[messages.length - 1];
+  const isStreaming = lastMsg?.role === 'assistant' && lastMsg?.streaming;
+  // Show typing dots only when loading but no tokens have arrived yet
+  const showTypingDots = loading && (!isStreaming || lastMsg?.content === '');
 
   const messageRows = useMemo(
     () =>
@@ -48,8 +82,7 @@ const Chat = () => {
           key={`${msg.timestamp || index}-${index}`}
           className={`chat-message-row ${msg.role === 'user' ? 'is-user' : 'is-assistant'}`}
         >
-          <div className="chat-message-bubble">
-            {/* Show thinking if available (Extended Thinking) */}
+          <div className={`chat-message-bubble${msg.streaming ? ' is-streaming' : ''}`}>
             {msg.thinking && msg.role === 'assistant' && (
               <details className="thinking-section">
                 <summary>🧠 Show Reasoning</summary>
@@ -60,20 +93,23 @@ const Chat = () => {
             )}
             <div className="message-content">
               <ReactMarkdown>{msg.content}</ReactMarkdown>
+              {msg.streaming && msg.content && (
+                <span className="streaming-cursor" aria-hidden="true" />
+              )}
             </div>
-            <time>{formatTime(msg.timestamp)}</time>
+            {!msg.streaming && <time>{formatTime(msg.timestamp)}</time>}
           </div>
         </article>
       )),
     [messages],
   );
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     if (!canSend) return;
     const text = input;
     setInput('');
-    await sendMessage(text);
+    sendMessage(text);
   };
 
   const handleKeyDown = (event) => {
@@ -126,15 +162,13 @@ const Chat = () => {
           <div className="chat-messages-list">{messageRows}</div>
         )}
 
-        {loading && (
-          <article className="chat-message-row is-assistant">
-            <div className="chat-message-bubble chat-loading-bubble">
-              <span />
-              <span />
-              <span />
-            </div>
-          </article>
+        {/* Tool call status — shown above the typing dots */}
+        {loading && toolStatus?.phase === 'running' && (
+          <ToolStatusBadge toolStatus={toolStatus} />
         )}
+
+        {/* Typing dots — only while waiting for the very first token */}
+        {showTypingDots && <TypingDots />}
 
         {error && <ErrorState title="Chat request failed" message={error} />}
         <div ref={endRef} />

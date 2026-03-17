@@ -1,5 +1,5 @@
-const Skeleton = ({ className = '' }) => {
-  return <div className={`ui-skeleton ${className}`.trim()} aria-hidden="true" />;
+const Skeleton = ({ className = '', style }) => {
+  return <div className={`ui-skeleton ${className}`.trim()} style={style} aria-hidden="true" />;
 };
 
 export default Skeleton;
