@@ -1,11 +1,116 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.models.request import CalculateIndicatorRequest, AnalyzeRequest
 from app.models.response import CalculateIndicatorResponse, AnalyzeResponse, ErrorResponse
 from app.services.agent_service import AgentService
 from app.config.market_data import validate_period_interval_combination
+import asyncio
+import pandas as pd
 
 router = APIRouter()
 agent_service = AgentService()
+
+_OVERLAY_INDICATORS = {
+    'sma', 'ema', 'wma', 'dema', 'tema', 'hma', 'vwap', 'vwma',
+    'zlma', 'kama', 'fwma', 'pwma', 'trima', 'midpoint', 'midprice',
+}
+_BBANDS_INDICATORS = {'bbands', 'kc', 'donchian'}
+_MACD_INDICATORS = {'macd', 'ppo', 'trix'}
+
+
+def _classify_indicator(indicator: str) -> str:
+    ind = indicator.lower()
+    if ind in _OVERLAY_INDICATORS:
+        return "overlay"
+    if ind in _BBANDS_INDICATORS:
+        return "bbands"
+    if ind in _MACD_INDICATORS:
+        return "macd"
+    return "oscillator"
+
+
+@router.get(
+    "/chart-data",
+    summary="Get OHLCV + full indicator series for charting",
+)
+async def get_chart_data(
+    symbol: str = Query(...),
+    indicator: str = Query(...),
+    interval: str = Query("1d"),
+    data_period: str = Query("6mo"),
+    indicator_period: int = Query(14),
+):
+    try:
+        import yfinance as yf
+        import pandas_ta as ta
+
+        def _fetch():
+            ticker = yf.Ticker(symbol)
+            df = ticker.history(period=data_period, interval=interval)
+            return df
+
+        df = await asyncio.get_event_loop().run_in_executor(None, _fetch)
+
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+
+        indicator_func = getattr(df.ta, indicator.lower(), None)
+        if indicator_func is None:
+            raise HTTPException(status_code=400, detail=f"Unknown indicator: {indicator}")
+
+        ind_result = indicator_func(length=indicator_period)
+        if ind_result is None:
+            raise HTTPException(status_code=400, detail=f"Indicator {indicator} returned no data")
+
+        def _fmt_date(idx):
+            return idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx)[:10]
+
+        ohlcv = [
+            {
+                "date": _fmt_date(idx),
+                "open":  round(float(row['Open']),   2),
+                "high":  round(float(row['High']),   2),
+                "low":   round(float(row['Low']),    2),
+                "close": round(float(row['Close']),  2),
+                "volume": int(row['Volume']),
+            }
+            for idx, row in df.iterrows()
+        ]
+
+        if isinstance(ind_result, pd.DataFrame):
+            cols = list(ind_result.columns)
+            indicator_series = []
+            for idx, row in ind_result.iterrows():
+                entry = {"date": _fmt_date(idx)}
+                for col in cols:
+                    v = row[col]
+                    entry[col] = round(float(v), 4) if pd.notna(v) else None
+                indicator_series.append(entry)
+        else:
+            col_name = ind_result.name or indicator.upper()
+            cols = [col_name]
+            indicator_series = []
+            for idx, val in ind_result.items():
+                indicator_series.append({
+                    "date": _fmt_date(idx),
+                    col_name: round(float(val), 4) if pd.notna(val) else None,
+                })
+
+        return {
+            "symbol": symbol.upper(),
+            "indicator": indicator,
+            "interval": interval,
+            "data_period": data_period,
+            "indicator_period": indicator_period,
+            "indicator_type": _classify_indicator(indicator),
+            "indicator_columns": cols,
+            "ohlcv": ohlcv,
+            "indicator_series": indicator_series,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(

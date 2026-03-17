@@ -45,18 +45,21 @@ async def lifespan(app: FastAPI):
         logger.info("✅ LangGraph checkpointer → Async Postgres initialized")
     except Exception as e:
         logger.error("❌ Async Postgres checkpointer init failed: %s", e)
-        logger.warning("Falling back to Redis checkpointer…")
+        logger.warning("Falling back to AsyncRedisSaver checkpointer…")
         try:
-            from langgraph.checkpoint.redis import RedisSaver
-            from app.core.redis_client import get_redis_checkpointer_client
-            redis_client = get_redis_checkpointer_client()
-            checkpointer = RedisSaver(redis_client=redis_client)
-            checkpointer.setup()
+            from langgraph.checkpoint.redis.aio import AsyncRedisSaver
+            from app.core.config import settings
+            redis_url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}"
+            checkpointer = AsyncRedisSaver(redis_url=redis_url)
+            await checkpointer.setup()
             set_checkpointer(checkpointer)
-            logger.info("✅ LangGraph checkpointer → Redis (fallback)")
+            logger.info("✅ LangGraph checkpointer → AsyncRedisSaver (fallback)")
         except Exception as e2:
-            logger.error("❌ Redis checkpointer fallback also failed: %s", e2)
-            set_checkpointer(None)
+            logger.error("❌ AsyncRedisSaver fallback also failed: %s", e2)
+            # Last resort: MemorySaver (in-process, no persistence but always async-compatible)
+            from langgraph.checkpoint.memory import MemorySaver
+            set_checkpointer(MemorySaver())
+            logger.warning("⚠️  LangGraph checkpointer → MemorySaver (no persistence)")
 
     # The agent is compiled at module import time (before lifespan) so it picks
     # up only the Redis fallback.  Recompile now with the correct checkpointer.

@@ -53,15 +53,12 @@ def _get_checkpointer():
     if cp is not None:
         return cp
 
-    # Redis fallback (cold start before lifespan has run, or standalone tests)
+    # MemorySaver fallback — supports both sync and async methods (aget_tuple, etc.)
+    # Used only during cold startup before the lifespan sets the proper async checkpointer.
     try:
-        from langgraph.checkpoint.redis import RedisSaver
-        from app.core.redis_client import get_redis_checkpointer_client
-        redis_client = get_redis_checkpointer_client()
-        redis_client.ping()
-        cp = RedisSaver(redis_client=redis_client)
-        cp.setup()
-        print("✅ Agent graph compiled with Redis checkpointer (fallback)")
+        from langgraph.checkpoint.memory import MemorySaver
+        cp = MemorySaver()
+        print("✅ Agent graph compiled with MemorySaver (cold-start fallback)")
         return cp
     except Exception as e:
         print(f"❌ No checkpointer available: {e}")

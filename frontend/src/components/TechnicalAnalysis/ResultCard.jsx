@@ -1,18 +1,36 @@
+import { useState, useEffect } from 'react';
 import EmptyState from '../ui/EmptyState';
 import Skeleton from '../ui/Skeleton';
-
-const extractIndicatorValue = (response = '') => {
-  const match = String(response).match(/(-?\d+(?:\.\d+)?)/);
-  return match ? Number(match[1]).toFixed(2) : '--';
-};
+import TechnicalChart from './TechnicalChart';
+import { getChartData } from '../../services/api';
+import './ResultCard.css';
 
 const ResultCard = ({ result, loading }) => {
+  const [chartData, setChartData] = useState(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(null);
+
+  useEffect(() => {
+    if (!result?.params) {
+      setChartData(null);
+      return;
+    }
+    let cancelled = false;
+    setChartLoading(true);
+    setChartError(null);
+    getChartData(result.params)
+      .then((data) => { if (!cancelled) setChartData(data); })
+      .catch((err) => { if (!cancelled) setChartError(err.message); })
+      .finally(() => { if (!cancelled) setChartLoading(false); });
+    return () => { cancelled = true; };
+  }, [result]);
+
   if (loading) {
     return (
       <div className="result-panel-loading">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-56" />
-        <Skeleton className="h-16" />
+        <Skeleton style={{ height: '5rem', borderRadius: '8px' }} />
+        <Skeleton style={{ height: '14rem', borderRadius: '8px', marginTop: '1rem' }} />
+        <Skeleton style={{ height: '4rem', borderRadius: '8px', marginTop: '1rem' }} />
       </div>
     );
   }
@@ -21,47 +39,59 @@ const ResultCard = ({ result, loading }) => {
     return (
       <EmptyState
         title="No indicator output yet"
-        description="Run a calculation to view indicator value, response narrative, and metadata."
+        description="Run a calculation to view indicator value, response narrative, and chart."
       />
     );
   }
 
-  const currentValue = extractIndicatorValue(result.response);
+  const p = result.params ?? {};
+  const ind = p.indicator?.toUpperCase() ?? '--';
+  const sym = p.symbol?.toUpperCase() ?? '--';
 
   return (
     <section className="result-panel">
+
+      {/* metric strip */}
       <div className="metric-strip">
         <div>
-          <p className="metric-label">Current Value</p>
-          <p className="metric-value">{currentValue}</p>
+          <p className="metric-label">Symbol</p>
+          <p className="metric-text">{sym}</p>
         </div>
         <div>
           <p className="metric-label">Indicator</p>
-          <p className="metric-text">{result.params?.indicator?.toUpperCase() || '--'}</p>
+          <p className="metric-text">{ind}</p>
         </div>
         <div>
-          <p className="metric-label">Symbol</p>
-          <p className="metric-text">{result.params?.symbol || '--'}</p>
+          <p className="metric-label">Period</p>
+          <p className="metric-text">{p.data_period ?? '--'}</p>
+        </div>
+        <div>
+          <p className="metric-label">Interval</p>
+          <p className="metric-text">{p.interval ?? '--'}</p>
+        </div>
+        <div>
+          <p className="metric-label">Lookback</p>
+          <p className="metric-text">{p.indicator_period ?? '--'}</p>
         </div>
       </div>
 
-      <div className="chart-surface" aria-label="Chart preview">
-        <div className="chart-grid" />
-        <svg viewBox="0 0 400 160" className="chart-line" aria-hidden="true">
-          <path d="M10 120 C 60 100, 100 130, 150 90 C 200 50, 240 80, 300 55 C 330 45, 360 70, 390 60" />
-        </svg>
-      </div>
+      {/* real chart */}
+      {chartLoading && (
+        <Skeleton style={{ height: '28rem', borderRadius: '12px', marginTop: '1.5rem' }} />
+      )}
+      {!chartLoading && chartError && (
+        <p className="chart-error">Chart unavailable: {chartError}</p>
+      )}
+      {!chartLoading && chartData && (
+        <TechnicalChart chartData={chartData} />
+      )}
 
+      {/* AI narrative */}
       <div className="response-panel">
         <h4>Analysis Summary</h4>
         <p>{result.response}</p>
       </div>
 
-      <div className="meta-row">
-        <span>Period: {result.params?.data_period || '--'}</span>
-        <span>Interval: {result.params?.interval || '--'}</span>
-        <span>Lookback: {result.params?.indicator_period || '--'}</span>
-      </div>
     </section>
   );
 };

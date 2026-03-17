@@ -1,0 +1,75 @@
+.tc-wrap {
+  margin-top: 1.5rem;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 1rem 0.5rem 0.75rem;
+}
+
+.tc-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0 0.75rem 0.25rem;
+}
+
+.tc-label-sm {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #1f2937;
+}
+
+/* ── tooltip ────────────────────────────────── */
+
+.tc-tooltip {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  min-width: 120px;
+  font-size: 0.78rem;
+}
+
+.tc-tooltip-date {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  margin-bottom: 0.35rem;
+}
+
+.tc-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #e5e7eb;
+  margin: 0.1rem 0;
+}
+
+.tc-tooltip-row.up { color: #10b981; }
+.tc-tooltip-row.dn { color: #ef4444; }
+.tc-tooltip-row.muted { color: #6b7280; font-size: 0.72rem; }
+
+/* ── legend ─────────────────────────────────── */
+
+.tc-legend {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.6rem 0.75rem 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
+
+.tc-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

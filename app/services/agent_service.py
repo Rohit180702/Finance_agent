@@ -2,6 +2,7 @@ from typing import Dict, Any, List, AsyncGenerator
 from app.agent.graph import create_agent
 import uuid
 import json
+import traceback
 
 
 class AgentService:
@@ -153,7 +154,8 @@ class AgentService:
             }
 
         except Exception as e:
-            raise Exception(f"Agent invocation failed: {str(e)}")
+            traceback.print_exc()
+            raise Exception(f"Agent invocation failed: {type(e).__name__}: {str(e)}")
 
     async def stream_chat(
         self, message: str, session_id: str = None

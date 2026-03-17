@@ -44,5 +44,13 @@ export const analyze = async (message) => {
   return response.data;
 };
 
+/**
+ * Fetch OHLCV + full indicator time-series for charting
+ */
+export const getChartData = async (params) => {
+  const response = await api.get('/technical/chart-data', { params });
+  return response.data;
+};
+
 export default api;
 
