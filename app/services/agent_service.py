@@ -1,6 +1,7 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, AsyncGenerator
 from app.agent.graph import create_agent
 import uuid
+import json
 
 
 class AgentService:
@@ -29,8 +30,8 @@ class AgentService:
             # Debug: Print full traceback on error
             import traceback
             try:
-                # Get the current state from the checkpointer
-                state = self.agent.get_state(config)
+                # Get the current state from the checkpointer (async checkpointer requires aget_state)
+                state = await self.agent.aget_state(config)
             except Exception as e:
                 print(f"Error in get_state: {e}")
                 print(f"Full traceback:")
@@ -98,8 +99,8 @@ class AgentService:
                 print(f"DEBUG: Agent has no checkpointer!")
 
             # Invoke the agent with just the current message
-            # Redis checkpointer handles conversation history automatically
-            result = self.agent.invoke(
+            # Async checkpointer requires ainvoke
+            result = await self.agent.ainvoke(
                 {"messages": [("user", message)]},
                 config=config
             )
@@ -153,6 +154,68 @@ class AgentService:
 
         except Exception as e:
             raise Exception(f"Agent invocation failed: {str(e)}")
+
+    async def stream_chat(
+        self, message: str, session_id: str = None
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Stream chat response token-by-token using LangGraph astream_events.
+
+        Yields dicts with keys:
+          {"type": "session",    "session_id": str}
+          {"type": "tool_start", "tool": str, "input": dict}
+          {"type": "tool_end",   "tool": str}
+          {"type": "token",      "content": str}
+          {"type": "done"}
+          {"type": "error",      "message": str}
+        """
+        if not session_id:
+            session_id = str(uuid.uuid4())
+
+        config = {"configurable": {"thread_id": session_id}}
+
+        yield {"type": "session", "session_id": session_id}
+
+        try:
+            async for event in self.agent.astream_events(
+                {"messages": [("user", message)]},
+                config=config,
+                version="v2",
+            ):
+                kind = event["event"]
+
+                if kind == "on_chat_model_stream":
+                    chunk = event["data"]["chunk"]
+                    content = chunk.content
+
+                    if isinstance(content, str) and content:
+                        yield {"type": "token", "content": content}
+
+                    elif isinstance(content, list):
+                        for block in content:
+                            text = ""
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                text = block.get("text", "")
+                            elif hasattr(block, "type") and block.type == "text":
+                                text = getattr(block, "text", "")
+                            if text:
+                                yield {"type": "token", "content": text}
+
+                elif kind == "on_tool_start":
+                    yield {
+                        "type": "tool_start",
+                        "tool": event.get("name", ""),
+                        "input": event["data"].get("input", {}),
+                    }
+
+                elif kind == "on_tool_end":
+                    yield {"type": "tool_end", "tool": event.get("name", "")}
+
+        except Exception as exc:
+            yield {"type": "error", "message": str(exc)}
+            return
+
+        yield {"type": "done"}
 
     # Keep the old method for backward compatibility
     async def invoke(self, message: str) -> str:

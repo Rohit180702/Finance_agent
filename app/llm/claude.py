@@ -9,7 +9,8 @@ os.environ["ANTHROPIC_API_KEY"] = settings.ANTHROPIC_API_KEY
 
 model = init_chat_model(
     "claude-sonnet-4-5-20250929",
-    temperature=0
+    temperature=0,
+    streaming=True,
 )
 
 tools = [

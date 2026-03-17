@@ -33,12 +33,12 @@ If asked about non-finance topics, respond with:
 Stay focused on finance. Be helpful, accurate, and professional."""
 
 
-def call_model(state: MessagesState):
+async def call_model(state: MessagesState):
     messages = state["messages"]
     if not messages or not isinstance(messages[0], SystemMessage):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
     model_with_tools = model.bind_tools(tools)
-    response = model_with_tools.invoke(messages)
+    response = await model_with_tools.ainvoke(messages)
     return {"messages": [response]}
 
 

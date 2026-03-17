@@ -2,10 +2,13 @@
 Fundamental analysis endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from app.services.fundamental_services import fundamental_service
+import json
 
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from app.services.fundamental_services import fundamental_service
 
 router = APIRouter()
 
@@ -25,6 +28,52 @@ class FundamentalResponse(BaseModel):
     individual_results: dict
     errors: list[str]
     timestamp: str
+
+
+@router.post(
+    "/stream",
+    summary="Stream Fundamental Analysis (SSE)",
+    description="Run fundamental analysis and stream results as Server-Sent Events"
+)
+async def stream_fundamentals(request: FundamentalRequest):
+    """
+    Stream fundamental analysis via SSE.
+
+    Full analysis event sequence:
+      {"type":"start",            "symbol":str, "mode":"full"}
+      {"type":"section_start",    "section": "ratios"|"cashflow"|"balance_sheet"|"pnl"}  ×4
+      {"type":"section_complete", "section": str}  as each finishes
+      {"type":"consolidating"}
+      {"type":"token",            "content": str}  ×many
+      {"type":"done",             "individual_results":{...}, "errors":[], "timestamp":str}
+
+    Component deep-dive event sequence:
+      {"type":"start",     "symbol":str, "mode":"component", "section":str}
+      {"type":"fetching",  "section": str}
+      {"type":"analyzing"}
+      {"type":"token",     "content": str}  ×many
+      {"type":"done",      "individual_results":{...}, "errors":[], "timestamp":str}
+    """
+    async def event_generator():
+        try:
+            async for event_data in fundamental_service.stream_analyze(
+                symbol=request.symbol,
+                user_query=request.query,
+                component=request.component,
+            ):
+                yield f"data: {json.dumps(event_data)}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(

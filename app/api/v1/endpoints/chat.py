@@ -2,11 +2,15 @@
 Chat endpoints for conversational interaction with the agent.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from app.models.chat import ChatRequest, ChatResponse, ChatMessage
-from app.services.agent_service import agent_service
+import json
 from datetime import datetime
 from typing import List
+
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
+
+from app.models.chat import ChatRequest, ChatResponse, ChatMessage
+from app.services.agent_service import agent_service
 
 router = APIRouter()
 
@@ -47,6 +51,44 @@ async def send_message(request: ChatRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/stream",
+    summary="Stream Chat Message (SSE)",
+    description="Send a message and receive a token-by-token SSE stream"
+)
+async def stream_message(request: ChatRequest):
+    """
+    Stream the agent response via Server-Sent Events.
+
+    Event types emitted:
+      {"type":"session",    "session_id":"..."}
+      {"type":"tool_start", "tool":"...", "input":{...}}
+      {"type":"tool_end",   "tool":"..."}
+      {"type":"token",      "content":"..."}
+      {"type":"done"}
+      {"type":"error",      "message":"..."}
+    """
+    async def event_generator():
+        try:
+            async for event_data in agent_service.stream_chat(
+                message=request.message,
+                session_id=request.session_id,
+            ):
+                yield f"data: {json.dumps(event_data)}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get(

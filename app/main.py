@@ -29,22 +29,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("❌ Alembic migration failed: %s", e)
 
-    # ── 2. LangGraph checkpointer → Postgres ──────────────────────────────────
+    # ── 2. LangGraph checkpointer → Async Postgres (required for astream_events)
     from app.core.checkpointer import set_checkpointer
     try:
         import psycopg
-        from langgraph.checkpoint.postgres import PostgresSaver
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-        conn = psycopg.connect(
+        aconn = await psycopg.AsyncConnection.connect(
             settings.DATABASE_URL.replace("+psycopg2", ""),
             autocommit=True,
         )
-        checkpointer = PostgresSaver(conn)
-        checkpointer.setup()   # creates LangGraph checkpoint tables if absent
+        checkpointer = AsyncPostgresSaver(aconn)
+        await checkpointer.setup()
         set_checkpointer(checkpointer)
-        logger.info("✅ LangGraph checkpointer → Postgres initialized")
+        logger.info("✅ LangGraph checkpointer → Async Postgres initialized")
     except Exception as e:
-        logger.error("❌ Postgres checkpointer init failed: %s", e)
+        logger.error("❌ Async Postgres checkpointer init failed: %s", e)
         logger.warning("Falling back to Redis checkpointer…")
         try:
             from langgraph.checkpoint.redis import RedisSaver
@@ -57,6 +57,16 @@ async def lifespan(app: FastAPI):
         except Exception as e2:
             logger.error("❌ Redis checkpointer fallback also failed: %s", e2)
             set_checkpointer(None)
+
+    # The agent is compiled at module import time (before lifespan) so it picks
+    # up only the Redis fallback.  Recompile now with the correct checkpointer.
+    try:
+        from app.services.agent_service import agent_service
+        from app.agent.graph import create_agent
+        agent_service.agent = create_agent()
+        logger.info("✅ Agent recompiled with async checkpointer")
+    except Exception as e:
+        logger.error("❌ Agent recompile failed: %s", e)
 
     # ── 3. Stock metrics cache job ─────────────────────────────────────────────
     try:
