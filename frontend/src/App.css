@@ -1,23 +1,21 @@
-/* ─────────────────────────────────────────────────────────────────────────────
-   APP SHELL  (layout root — sidebar + main column)
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── APP SHELL ── */
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 240px 1fr;
-  background:
-    radial-gradient(circle at 80% 10%, rgba(92, 164, 214, 0.07), transparent 32%),
-    radial-gradient(circle at 20% 85%, rgba(75, 141, 189, 0.05), transparent 34%),
-    transparent;
+  grid-template-columns: 260px 1fr;
+  background: var(--bg);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   CONTENT AREA
-───────────────────────────────────────────────────────────────────────────── */
+.app-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
 
+/* ── CONTENT AREA ── */
 .app-content {
-  padding: 28px 24px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -26,19 +24,51 @@
   flex: 1;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   ANIMATIONS
-───────────────────────────────────────────────────────────────────────────── */
+.app-content:has(.screener-page) {
+  padding: 20px 24px;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+}
 
+.app-content:has(.ai-page) {
+  padding: 0;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ── ANIMATIONS ── */
 @keyframes shimmer {
   from { background-position: 100% 0; }
   to   { background-position: -100% 0; }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   RESPONSIVE
-───────────────────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
+/* ── MOBILE OVERLAY ── */
+.app-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: 0;
+  z-index: 15;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  backdrop-filter: blur(2px);
+}
+
+.app-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── RESPONSIVE ── */
 @media (max-width: 1280px) {
   .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -48,23 +78,21 @@
 
   .app-sidebar {
     position: fixed;
-    left: -260px;
+    left: -280px;
     top: 0;
-    width: 240px;
-    transition: left 0.24s ease;
+    width: 260px;
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 20;
   }
-
   .app-sidebar.is-open { left: 0; }
-
   .app-overlay { display: block; }
-  .menu-btn    { display: grid; }
-  .sidebar-x   { display: grid; }
+  .menu-btn { display: grid; }
+  .sidebar-x { display: grid; }
 }
 
 @media (max-width: 900px) {
   .technical-grid { grid-template-columns: 1fr; }
-  .quick-grid     { grid-template-columns: 1fr; }
+  .quick-grid { grid-template-columns: 1fr; }
 
   .sentiment-results-grid,
   .metric-strip,
@@ -89,7 +117,5 @@
   .app-topbar-right .topbar-pill { display: none; }
   .app-content { padding: 16px; }
   .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-  .ui-card-header,
-  .ui-card-body { padding: 14px; }
+  .ui-card-header, .ui-card-body { padding: 14px; }
 }

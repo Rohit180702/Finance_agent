@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 * {
   box-sizing: border-box;
@@ -8,31 +8,102 @@
 
 :root {
   font-family: 'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif;
-  color-scheme: dark;
-  --bg: #0f1115;
-  --bg-elevated: #151922;
-  --bg-muted: #1d2430;
-  --border: #2a3342;
-  --text-primary: #e5e7eb;
-  --text-secondary: #aeb8c8;
-  --text-tertiary: #7e8aa0;
-  --accent: #5ca4d6;
-  --accent-strong: #3f8fc7;
+
+  /* ── Common tokens ── */
+  --accent: #22c55e;
+  --accent-hover: #16a34a;
+  --accent-light: rgba(34, 197, 94, 0.10);
+  --accent-border: rgba(34, 197, 94, 0.25);
+  --accent-blue: #3b82f6;
+  --accent-blue-light: rgba(59, 130, 246, 0.08);
+
   --success: #22c55e;
   --danger: #ef4444;
+  --warning: #f59e0b;
+
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 16px;
-  --shadow-sm: 0 6px 18px rgba(2, 6, 23, 0.24);
-  --shadow-lg: 0 16px 38px rgba(2, 6, 23, 0.4);
 }
 
-html,
-body,
-#root {
+/* ═══════════════════════════════════
+   DARK THEME  (Design A)
+   ═══════════════════════════════════ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0f19;
+  --bg-card: #111827;
+  --bg-elevated: #1a2236;
+  --bg-muted: #1e293b;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --border: #1e293b;
+  --border-light: #162032;
+
+  --text-primary: #f0f4f8;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+
+  --shadow-sm: 0 6px 18px rgba(2, 6, 23, 0.24);
+  --shadow-md: 0 8px 24px rgba(2, 6, 23, 0.32);
+  --shadow-lg: 0 16px 38px rgba(2, 6, 23, 0.4);
+
+  --sidebar-bg: rgba(8, 11, 18, 0.96);
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.04);
+  --sidebar-bg-active: rgba(34, 197, 94, 0.12);
+  --sidebar-border: #1e293b;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-text-dim: #475569;
+  --sidebar-accent: #4ade80;
+
+  --topbar-bg: rgba(11, 15, 25, 0.85);
+
+  --surface-1: var(--bg-card);
+  --surface-2: var(--bg-muted);
+}
+
+/* ═══════════════════════════════════
+   LIGHT THEME
+   ═══════════════════════════════════ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-muted: #f1f5f9;
+  --bg-hover: rgba(0, 0, 0, 0.03);
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.12);
+
+  --sidebar-bg: #0f172a;
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-bg-active: rgba(34, 197, 94, 0.15);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-text-dim: #475569;
+  --sidebar-accent: #4ade80;
+
+  --topbar-bg: rgba(255, 255, 255, 0.85);
+
+  --surface-1: var(--bg-card);
+  --surface-2: var(--bg-muted);
+}
+
+html, body, #root {
   width: 100%;
   min-height: 100%;
-  background: radial-gradient(circle at top right, rgba(148, 163, 184, 0.08), transparent 45%), var(--bg);
+  background: var(--bg);
   color: var(--text-primary);
 }
 
@@ -43,18 +114,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font: inherit;
   color: inherit;
 }
 
-ul,
-ol {
-  list-style: none;
-}
+ul, ol { list-style: none; }
+
+a { color: inherit; }
 
 .sr-only {
   position: absolute;

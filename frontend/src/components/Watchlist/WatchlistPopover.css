@@ -4,11 +4,11 @@
   top: calc(100% + 6px);
   right: 0;
   width: 220px;
-  background: #1f2937;
-  border: 1px solid #374151;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0.5rem 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
   animation: wlp-in 0.12s ease-out;
 }
 
@@ -22,10 +22,10 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-tertiary);
   padding: 0 0.75rem 0.4rem;
   margin: 0;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid var(--border);
 }
 
 .wlp-list {
@@ -44,16 +44,16 @@
   cursor: pointer;
   transition: background 0.1s;
   font-size: 0.85rem;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
-.wlp-item:hover { background: #374151; }
+.wlp-item:hover { background: var(--bg-muted); }
 
 .wlp-check {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1.5px solid #4b5563;
+  border: 1.5px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,9 +62,9 @@
 }
 
 .wlp-check.checked {
-  background: #818cf8;
-  border-color: #818cf8;
-  color: white;
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
 }
 
 .wlp-list-name {
@@ -76,14 +76,14 @@
 
 .wlp-count {
   font-size: 0.72rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* ── footer ─────────────────────────────────── */
 
 .wlp-footer {
   padding: 0.4rem 0.75rem 0.25rem;
-  border-top: 1px solid #374151;
+  border-top: 1px solid var(--border);
   margin-top: 0.25rem;
 }
 
@@ -94,13 +94,15 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #818cf8;
+  color: var(--accent-blue);
   font-size: 0.82rem;
   padding: 0.2rem 0;
   transition: color 0.12s;
 }
 
-.wlp-new-btn:hover { color: #a5b4fc; }
+.wlp-new-btn:hover {
+  color: color-mix(in srgb, var(--accent-blue) 78%, var(--text-primary));
+}
 
 .wlp-new-row {
   display: flex;
@@ -110,16 +112,19 @@
 
 .wlp-new-input {
   flex: 1;
-  background: #111827;
-  border: 1px solid #4b5563;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.3rem 0.5rem;
   font-size: 0.82rem;
-  color: #e5e7eb;
+  color: var(--text-primary);
   outline: none;
 }
 
-.wlp-new-input:focus { border-color: #818cf8; }
+.wlp-new-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-light);
+}
 
 .wlp-new-confirm {
   display: flex;
@@ -129,10 +134,12 @@
   height: 26px;
   border-radius: 6px;
   border: none;
-  background: #818cf8;
-  color: white;
+  background: var(--accent-blue);
+  color: #ffffff;
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.wlp-new-confirm:hover { background: #6366f1; }
+.wlp-new-confirm:hover {
+  background: color-mix(in srgb, var(--accent-blue) 88%, var(--text-primary));
+}

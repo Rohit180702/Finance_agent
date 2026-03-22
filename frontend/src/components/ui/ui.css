@@ -1,23 +1,11 @@
-/* ─────────────────────────────────────────────────────────────────────────────
-   CARD COMPONENT
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── CARD ── */
 .ui-card {
-  background: linear-gradient(180deg, rgba(21, 25, 34, 0.95), rgba(15, 17, 21, 0.97));
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: visible;
-}
-
-.ui-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 45%);
-  pointer-events: none;
-  border-radius: inherit;
 }
 
 .ui-card-header {
@@ -26,12 +14,13 @@
   justify-content: space-between;
   gap: 8px;
   padding: 16px 18px;
-  border-bottom: 1px solid rgba(35, 48, 69, 0.7);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .ui-card-title {
   font-size: 15px;
   font-weight: 700;
+  color: var(--text-primary);
   letter-spacing: 0.01em;
 }
 
@@ -48,10 +37,7 @@
   gap: 14px;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   BUTTONS
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── BUTTONS ── */
 .ui-btn {
   border-radius: 9px;
   border: 1px solid transparent;
@@ -70,22 +56,24 @@
 .ui-btn-sm { min-height: 33px; padding: 0 12px; font-size: 12px; }
 
 .ui-btn-primary {
-  background: linear-gradient(180deg, #3b82f6, #2563eb);
-  color: #eff6ff;
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+  color: #fff;
 }
+
 .ui-btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.3);
 }
 
 .ui-btn-secondary {
-  border-color: rgba(148, 163, 184, 0.35);
-  background: rgba(30, 41, 59, 0.4);
+  border-color: var(--border);
+  background: var(--bg-card);
   color: var(--text-primary);
 }
+
 .ui-btn-secondary:hover:not(:disabled) {
-  border-color: rgba(148, 163, 184, 0.6);
-  background: rgba(30, 41, 59, 0.75);
+  border-color: var(--text-tertiary);
+  background: var(--bg-muted);
 }
 
 .ui-btn-ghost {
@@ -93,23 +81,22 @@
   background: transparent;
   color: var(--text-secondary);
 }
+
 .ui-btn-ghost:hover:not(:disabled) {
   color: var(--text-primary);
-  border-color: rgba(100, 116, 139, 0.7);
+  border-color: var(--text-tertiary);
+  background: var(--bg-muted);
 }
 
 .full-width { width: 100%; }
 .icon-left svg { width: 15px; height: 15px; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FORM FIELDS
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── FORM FIELDS ── */
 .ui-field { display: flex; flex-direction: column; gap: 6px; }
 
 .ui-field-label  { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
 .ui-field-hint   { color: var(--text-tertiary); font-size: 11px; }
-.ui-field-error  { color: #fca5a5; font-size: 11px; }
+.ui-field-error  { color: var(--danger); font-size: 11px; }
 
 .ui-input,
 .ui-select,
@@ -118,7 +105,7 @@
 .chat-composer textarea {
   border-radius: 9px;
   border: 1px solid var(--border);
-  background: rgba(15, 20, 30, 0.8);
+  background: var(--bg-card);
   color: var(--text-primary);
   width: 100%;
   min-height: 40px;
@@ -132,8 +119,8 @@
 .selector-trigger:focus,
 .selector-search:focus,
 .chat-composer textarea:focus {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 }
 
 .ui-select-wrap { position: relative; }
@@ -156,12 +143,9 @@
   padding-right: 28px;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SEGMENTED CONTROL
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── SEGMENTED CONTROL ── */
 .ui-segmented {
-  background: rgba(15, 23, 42, 0.7);
+  background: var(--bg-muted);
   border: 1px solid var(--border);
   border-radius: 11px;
   padding: 3px;
@@ -183,21 +167,20 @@
 }
 
 .ui-segment.is-active {
-  background: rgba(59, 130, 246, 0.16);
-  color: #93c5fd;
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SKELETON
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── SKELETON ── */
 .ui-skeleton {
   border-radius: 9px;
   background: linear-gradient(
     100deg,
-    rgba(51, 65, 85, 0.18) 20%,
-    rgba(51, 65, 85, 0.42) 50%,
-    rgba(51, 65, 85, 0.18) 80%
+    var(--bg-muted) 20%,
+    var(--border) 50%,
+    var(--bg-muted) 80%
   );
   background-size: 240% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
@@ -211,12 +194,9 @@
 .h-48 { height: 192px; }
 .h-56 { height: 224px; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   EMPTY / ERROR STATES
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── EMPTY / ERROR STATES ── */
 .ui-empty-state {
-  border: 1px dashed rgba(100, 116, 139, 0.35);
+  border: 1px dashed var(--border);
   border-radius: var(--radius-md);
   padding: 32px 20px;
   text-align: center;
@@ -226,40 +206,38 @@
   align-items: center;
 }
 
-.ui-empty-state h3 { font-size: 15px; }
+.ui-empty-state h3 { font-size: 15px; color: var(--text-primary); }
 .ui-empty-state p  { color: var(--text-secondary); max-width: 520px; }
 
 .ui-empty-graphic {
   width: 72px;
   height: 72px;
   border-radius: 18px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-light);
   display: grid;
   place-items: center;
   position: relative;
   margin-bottom: 6px;
 }
 
-.dot          { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: rgba(147, 197, 253, 0.65); }
+.dot          { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); opacity: 0.5; }
 .dot-a        { top: 16px; left: 20px; }
 .dot-b        { top: 32px; left: 42px; }
 .dot-c        { top: 48px; left: 26px; }
 .ui-empty-action { margin-top: 8px; }
 
 .ui-error-state {
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  background: rgba(69, 10, 10, 0.28);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.04);
   border-radius: 11px;
   padding: 12px;
 }
 
-.ui-error-title   { color: #fca5a5; font-weight: 600; }
-.ui-error-message { color: #fecaca; margin-top: 4px; font-size: 13px; }
+.ui-error-title   { color: var(--danger); font-weight: 600; }
+.ui-error-message { color: #b91c1c; margin-top: 4px; font-size: 13px; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   STOCK / INDICATOR SELECTORS
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── STOCK / INDICATOR SELECTORS ── */
 .selector { position: relative; }
 
 .selector-trigger {
@@ -287,7 +265,7 @@
   top: calc(100% + 7px);
   left: 0;
   width: 100%;
-  background: #0b1220;
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 11px;
   box-shadow: var(--shadow-lg);
@@ -324,7 +302,7 @@
 
 .selector-tag {
   border: 1px solid var(--border);
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--bg-muted);
   color: var(--text-secondary);
   min-height: 29px;
   border-radius: 999px;
@@ -335,9 +313,9 @@
 
 .selector-tag.is-selected,
 .selector-item.is-selected {
-  border-color: rgba(59, 130, 246, 0.55);
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-light);
 }
 
 .selector-section-label {
@@ -361,17 +339,14 @@
 
 .selector-item:hover {
   border-color: var(--border);
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--bg-muted);
 }
 
-.selector-item span  { font-size: 12px; font-weight: 600; display: block; }
+.selector-item span  { font-size: 12px; font-weight: 600; display: block; color: var(--text-primary); }
 .selector-item small { color: var(--text-secondary); display: block; margin-top: 2px; }
 .selector-empty      { color: var(--text-secondary); font-size: 12px; padding: 12px; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FORMS
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── FORMS ── */
 .indicator-form,
 .fundamental-form,
 .sentiment-form {
@@ -385,4 +360,3 @@
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-

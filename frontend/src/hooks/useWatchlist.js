@@ -43,13 +43,21 @@ export const useWatchlist = () => {
 
   /* ── list management ─────────────────────────── */
 
-  const createList = useCallback((name = 'New List') => {
+  const createList = useCallback((name) => {
     const id = makeId();
-    update((prev) => ({
-      ...prev,
-      lists: [...prev.lists, { id, name, symbols: [] }],
-      activeListId: id,
-    }));
+    update((prev) => {
+      if (!name) {
+        const existing = prev.lists.map((l) => l.name);
+        let n = prev.lists.length + 1;
+        while (existing.includes(`Watchlist ${n}`)) n++;
+        name = `Watchlist ${n}`;
+      }
+      return {
+        ...prev,
+        lists: [...prev.lists, { id, name, symbols: [] }],
+        activeListId: id,
+      };
+    });
     return id;
   }, [update]);
 

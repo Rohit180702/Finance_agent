@@ -1,20 +1,20 @@
 import { Link } from 'react-router-dom';
 import { Star, SlidersHorizontal } from 'lucide-react';
 import WatchlistCard from '../components/Watchlist/WatchlistCard';
-import './Dashboard.css';
+import './WatchlistPage.css';
 
 const WatchlistPage = () => (
-  <div className="watchlist-page">
-    <div className="watchlist-page-header">
+  <div className="wl-page">
+    <div className="wl-page-header">
       <div>
-        <h2 className="watchlist-page-title">
-          <Star size={18} className="watchlist-page-icon" /> Watchlist
+        <h2 className="wl-page-title">
+          <Star size={20} /> Watchlist
         </h2>
-        <p className="watchlist-page-sub">
+        <p className="wl-page-sub">
           Track your stocks across multiple lists. Prices refresh every 60 seconds.
         </p>
       </div>
-      <Link to="/screener" className="watchlist-add-btn">
+      <Link to="/screener" className="wl-screener-link">
         <SlidersHorizontal size={14} /> Browse Screener
       </Link>
     </div>

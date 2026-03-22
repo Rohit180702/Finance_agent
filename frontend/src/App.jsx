@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
-import ChatPanel from './components/layout/ChatPanel';
-import DashboardPage from './pages/DashboardPage';
+import { useTheme } from './hooks/useTheme';
+import AIResearchPage from './pages/AIResearchPage';
 import TechnicalPage from './pages/TechnicalPage';
 import FundamentalPage from './pages/FundamentalPage';
 import SentimentPage from './pages/SentimentPage';
@@ -16,25 +16,25 @@ import './App.css';
 import './components/ui/ui.css';
 
 function AppShell() {
-  const [chatOpen, setChatOpen]       = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   return (
     <div className="app-shell">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onChatOpen={() => { setChatOpen(true); setSidebarOpen(false); }}
       />
 
       <div className="app-main">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
-          onChatToggle={() => setChatOpen((o) => !o)}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
         <main className="app-content">
           <Routes>
-            <Route path="/"              element={<DashboardPage />} />
+            <Route path="/"              element={<AIResearchPage />} />
             <Route path="/screener"      element={<ScreenerPage />} />
             <Route path="/stock/:symbol" element={<StockDetailPage />} />
             <Route path="/compare"       element={<ComparisonPage />} />
@@ -48,9 +48,6 @@ function AppShell() {
         </main>
       </div>
 
-      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
-
-      {/* Sidebar overlay for mobile */}
       <button
         type="button"
         className={`app-overlay ${sidebarOpen ? 'is-open' : ''}`}

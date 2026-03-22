@@ -1,12 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './Comparison.css';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip as ReTooltip,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+  Tooltip as ReTooltip, Legend,
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
-import { X, Search, Loader2, Brain, ArrowLeft, GitCompare, AlertCircle, Plus } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import { X, Search, Loader2, Sparkles, ArrowRightLeft, AlertCircle, Plus } from 'lucide-react';
 import { compareStocks, searchStocks } from '../services/stockDetailApi';
+
+const CACHE_KEY = 'cmp_state';
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveCache(symbols, data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ symbols, data, ts: Date.now() }));
+  } catch { /* quota exceeded */ }
+}
 
 const QUICK_PICKS = [
   { symbol: 'RELIANCE.NS', label: 'Reliance' },
@@ -28,25 +45,23 @@ const fmtCr = (v) => {
   return `₹${n.toFixed(0)} Cr`;
 };
 
-const CHIP_COLORS = ['#3b82f6', '#a855f7', '#f59e0b'];
+const CHIP_COLORS = ['hsl(217, 91%, 60%)', 'hsl(142, 71%, 45%)', '#facc15'];
 
-// Metrics to show in comparison table
 const METRICS = [
-  { key: 'price',          label: 'Price (₹)',       fmt: v => `₹${fmt(v)}` },
-  { key: 'market_cap_cr',  label: 'Market Cap',      fmt: fmtCr },
-  { key: 'pe',             label: 'P/E Ratio',       fmt: v => fmt(v) },
-  { key: 'pb',             label: 'P/B Ratio',       fmt: v => fmt(v) },
-  { key: 'roe',            label: 'ROE %',           fmt: v => `${fmt(v)}%` },
-  { key: 'roa',            label: 'ROA %',           fmt: v => `${fmt(v)}%` },
-  { key: 'debt_equity',    label: 'Debt / Equity',   fmt: v => fmt(v) },
-  { key: 'net_margin',     label: 'Net Margin %',    fmt: v => `${fmt(v)}%` },
-  { key: 'revenue_growth', label: 'Revenue Growth %',fmt: v => `${fmt(v)}%` },
-  { key: 'dividend_yield', label: 'Dividend Yield %',fmt: v => `${fmt(v)}%` },
-  { key: 'week52_high',    label: '52W High (₹)',    fmt: v => `₹${fmt(v)}` },
-  { key: 'week52_low',     label: '52W Low (₹)',     fmt: v => `₹${fmt(v)}` },
+  { key: 'price',          label: 'Price (₹)',        fmt: v => `₹${fmt(v)}`,   best: null },
+  { key: 'market_cap_cr',  label: 'Market Cap',       fmt: fmtCr,               best: 'highest' },
+  { key: 'pe',             label: 'P/E Ratio',        fmt: v => fmt(v),          best: 'lowest'  },
+  { key: 'pb',             label: 'P/B Ratio',        fmt: v => fmt(v),          best: 'lowest'  },
+  { key: 'roe',            label: 'ROE %',            fmt: v => `${fmt(v)}%`,    best: 'highest' },
+  { key: 'roa',            label: 'ROA %',            fmt: v => `${fmt(v)}%`,    best: 'highest' },
+  { key: 'debt_equity',    label: 'Debt / Equity',    fmt: v => fmt(v),          best: 'lowest'  },
+  { key: 'net_margin',     label: 'Net Margin %',     fmt: v => `${fmt(v)}%`,    best: 'highest' },
+  { key: 'revenue_growth', label: 'Revenue Growth %', fmt: v => `${fmt(v)}%`,    best: 'highest' },
+  { key: 'dividend_yield', label: 'Dividend Yield %', fmt: v => `${fmt(v)}%`,    best: 'highest' },
+  { key: 'week52_high',    label: '52W High (₹)',     fmt: v => `₹${fmt(v)}`,    best: null },
+  { key: 'week52_low',     label: '52W Low (₹)',      fmt: v => `₹${fmt(v)}`,    best: null },
 ];
 
-// Metrics used for radar chart (normalized 0-100)
 const RADAR_KEYS = [
   { key: 'roe',            label: 'ROE',     invert: false },
   { key: 'net_margin',     label: 'Margin',  invert: false },
@@ -73,8 +88,16 @@ function normalize(stocks) {
   });
 }
 
-// Stock search dropdown
-function StockSearch({ onAdd, existing }) {
+function getBestIndex(stocks, key, bestType) {
+  if (!bestType || stocks.length < 2) return -1;
+  const vals = stocks.map(s => parseFloat(s[key]));
+  const validVals = vals.filter(v => !isNaN(v));
+  if (validVals.length < 2) return -1;
+  const target = bestType === 'lowest' ? Math.min(...validVals) : Math.max(...validVals);
+  return vals.indexOf(target);
+}
+
+function StockSearch({ onAdd, existing, disabled }) {
   const [query, setQuery]   = useState('');
   const [results, setRes]   = useState([]);
   const [open, setOpen]     = useState(false);
@@ -110,13 +133,14 @@ function StockSearch({ onAdd, existing }) {
         <Search size={14} className="cmp-search-icon" />
         <input
           className="cmp-search-input"
-          placeholder="Search stock to add…"
+          placeholder={disabled ? 'Max 3 stocks' : 'Add a stock to compare…'}
           value={query}
           onChange={handleInput}
           onFocus={() => results.length && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
+          disabled={disabled}
         />
-        {busy && <Loader2 size={12} className="spin" />}
+        {busy && <Loader2 size={14} className="spin" />}
       </div>
       {open && results.length > 0 && (
         <ul className="cmp-search-dropdown">
@@ -134,29 +158,46 @@ function StockSearch({ onAdd, existing }) {
 
 export default function ComparisonPage() {
   const [searchParams] = useSearchParams();
-  const navigate       = useNavigate();
 
-  const initial = (searchParams.get('symbols') || '').split(',').filter(Boolean).slice(0, 3);
-  const [symbols,  setSymbols]  = useState(initial);
-  const [data,     setData]     = useState(null);
+  const urlSymbols = (searchParams.get('symbols') || '').split(',').filter(Boolean).slice(0, 3);
+  const cached = loadCache();
+  const initialSymbols = urlSymbols.length > 0 ? urlSymbols : (cached?.symbols || []);
+  const initialData    = cached?.data || null;
+
+  const [symbols,  setSymbols]  = useState(initialSymbols);
+  const [data,     setData]     = useState(initialData);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState(null);
 
-  const addSymbol = (sym) => {
+  const dataMatchesSymbols = data?.stocks?.length >= 2 &&
+    symbols.length >= 2 &&
+    symbols.every(sym => data.stocks.some(s => s.symbol === sym));
+
+  const addSymbol = useCallback((sym) => {
     if (symbols.length >= 3 || symbols.includes(sym)) return;
     setSymbols(prev => [...prev, sym]);
-  };
-  const removeSymbol = (sym) => setSymbols(prev => prev.filter(s => s !== sym));
+  }, [symbols]);
 
-  // Auto-compare when symbols change (≥ 2)
-  useEffect(() => {
-    if (symbols.length < 2) { setData(null); return; }
+  const removeSymbol = useCallback((sym) => {
+    setSymbols(prev => prev.filter(s => s !== sym));
+  }, []);
+
+  const runComparison = useCallback(() => {
+    if (symbols.length < 2) return;
     setLoading(true);
     setError(null);
     compareStocks(symbols)
-      .then(d => setData(d))
+      .then(d => {
+        setData(d);
+        saveCache(symbols, d);
+      })
       .catch(() => setError('Comparison failed. Please try again.'))
       .finally(() => setLoading(false));
+  }, [symbols]);
+
+  useEffect(() => {
+    if (symbols.length < 2) return;
+    saveCache(symbols, data);
   }, [symbols]);
 
   const stocks     = data?.stocks || [];
@@ -165,60 +206,75 @@ export default function ComparisonPage() {
   return (
     <div className="cmp-page">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="cmp-header">
-        <div className="cmp-header-left">
-          <button className="sdp-back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={14} /> Back
-          </button>
-          <div className="cmp-title-row">
-            <GitCompare size={18} />
-            <h1 className="cmp-title">Stock Comparison</h1>
-          </div>
+        <div className="cmp-header-icon-wrap">
+          <ArrowRightLeft size={18} />
         </div>
-      </div>
-
-      {/* ── Stock chips + search ── */}
-      <div className="cmp-chips-row">
-        {symbols.map((sym, i) => (
-          <Link
-            key={sym}
-            className="cmp-chip"
-            style={{ borderColor: CHIP_COLORS[i] }}
-            to={`/stock/${sym}`}
-          >
-            <span className="cmp-chip-dot" style={{ background: CHIP_COLORS[i] }} />
-            {sym.replace('.NS', '').replace('.BO', '')}
-            <button
-              className="cmp-chip-remove"
-              onClick={e => { e.preventDefault(); removeSymbol(sym); }}
-            >
-              <X size={10} />
-            </button>
-          </Link>
-        ))}
-        {symbols.length < 3 && (
-          <div className="cmp-add-wrap">
-            <StockSearch onAdd={addSymbol} existing={symbols} />
-          </div>
+        <h1 className="cmp-title">Compare Stocks</h1>
+        {stocks.length >= 2 && (
+          <span className="cmp-badge">{stocks.length} stocks</span>
         )}
       </div>
 
-      {symbols.length < 2 && !loading && (
-        <div className="cmp-empty-state">
-          <GitCompare size={48} className="cmp-empty-icon" />
+      {/* Selection bar */}
+      <div className="cmp-selection-bar">
+        <div className="cmp-search-area">
+          <StockSearch
+            onAdd={addSymbol}
+            existing={symbols}
+            disabled={symbols.length >= 3}
+          />
+        </div>
+
+        <div className="cmp-chips-row">
+          {symbols.map((sym, i) => (
+            <span
+              key={sym}
+              className="cmp-chip"
+              style={{ '--chip-color': CHIP_COLORS[i] }}
+            >
+              <span className="cmp-chip-dot" style={{ background: CHIP_COLORS[i] }} />
+              <Link className="cmp-chip-label" to={`/stock/${sym}`}>
+                {sym.replace('.NS', '').replace('.BO', '')}
+              </Link>
+              <button
+                className="cmp-chip-x"
+                onClick={() => removeSymbol(sym)}
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+
+          {symbols.length >= 2 && !loading && (
+            <button className="cmp-compare-btn" onClick={runComparison}>
+              <ArrowRightLeft size={13} />
+              Compare{dataMatchesSymbols ? ' again' : ''}
+            </button>
+          )}
+
+          {symbols.length < 2 && (
+            <span className="cmp-hint-text">Select at least 2 stocks</span>
+          )}
+        </div>
+      </div>
+
+      {/* Empty state */}
+      {symbols.length === 0 && !loading && !dataMatchesSymbols && (
+        <div className="cmp-empty">
+          <div className="cmp-empty-glow">
+            <ArrowRightLeft size={28} />
+          </div>
           <h2 className="cmp-empty-title">Compare stocks side by side</h2>
           <p className="cmp-empty-sub">
-            Search for stocks above, or pick from popular ones below. Add 2–3 to compare fundamentals, radar charts, and get an AI summary.
+            Search above or pick from popular stocks. Add 2–3 stocks, then hit
+            Compare to see fundamentals, radar charts, and an AI-powered summary.
           </p>
-          <div className="cmp-quick-picks">
+          <div className="cmp-quick-row">
             {QUICK_PICKS.filter(q => !symbols.includes(q.symbol)).map(q => (
-              <button
-                key={q.symbol}
-                className="cmp-quick-btn"
-                onClick={() => addSymbol(q.symbol)}
-              >
-                <Plus size={11} /> {q.label}
+              <button key={q.symbol} className="cmp-quick" onClick={() => addSymbol(q.symbol)}>
+                <Plus size={10} /> {q.label}
               </button>
             ))}
           </div>
@@ -226,107 +282,141 @@ export default function ComparisonPage() {
       )}
 
       {symbols.length === 1 && !loading && (
-        <div className="cmp-one-more">
-          <p>Good start! Add one more stock to begin comparing.</p>
-          <div className="cmp-quick-picks">
+        <div className="cmp-empty cmp-empty--compact">
+          <p className="cmp-empty-sub" style={{ marginBottom: 4 }}>
+            Good start! Add one more stock, then hit Compare.
+          </p>
+          <div className="cmp-quick-row">
             {QUICK_PICKS.filter(q => !symbols.includes(q.symbol)).slice(0, 5).map(q => (
-              <button key={q.symbol} className="cmp-quick-btn" onClick={() => addSymbol(q.symbol)}>
-                <Plus size={11} /> {q.label}
+              <button key={q.symbol} className="cmp-quick" onClick={() => addSymbol(q.symbol)}>
+                <Plus size={10} /> {q.label}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {loading && (
-        <div className="cmp-loading">
-          <Loader2 size={28} className="spin" />
-          <p>Comparing stocks with AI…</p>
+      {/* Prompt to compare after selecting ≥2 but no data yet */}
+      {symbols.length >= 2 && !data && !loading && !error && (
+        <div className="cmp-empty cmp-empty--compact">
+          <ArrowRightLeft size={22} style={{ color: '#60a5fa', opacity: 0.6 }} />
+          <p className="cmp-empty-sub">
+            Ready to compare <strong style={{ color: 'var(--text-primary)' }}>
+              {symbols.map(s => s.replace('.NS','').replace('.BO','')).join(', ')}
+            </strong>. Hit the Compare button above.
+          </p>
         </div>
       )}
 
-      {error && <div className="cmp-error"><AlertCircle size={16} /> {error}</div>}
+      {/* Loading */}
+      {loading && (
+        <div className="cmp-empty cmp-empty--compact">
+          <Loader2 size={24} className="spin" style={{ color: '#60a5fa' }} />
+          <p className="cmp-empty-sub">Comparing stocks with AI…</p>
+        </div>
+      )}
 
-      {data && !loading && (
+      {/* Error */}
+      {error && <div className="cmp-error"><AlertCircle size={15} /> {error}</div>}
+
+      {data && !loading && stocks.length >= 2 && (
         <>
-          {/* ── Metrics table ── */}
-          <div className="cmp-table-wrap">
-            <table className="cmp-table">
-              <thead>
-                <tr>
-                  <th className="cmp-th metric-col">Metric</th>
-                  {stocks.map((s, i) => (
-                    <th key={s.symbol} className="cmp-th" style={{ color: CHIP_COLORS[i] }}>
-                      {s.symbol?.replace('.NS', '')}<br/>
-                      <span className="cmp-th-name">{s.name}</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {METRICS.map(({ key, label, fmt: fmtFn }) => (
-                  <tr key={key} className="cmp-tr">
-                    <td className="cmp-td metric-col">{label}</td>
-                    {stocks.map(s => (
-                      <td key={s.symbol} className="cmp-td">{fmtFn(s[key])}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Radar chart ── */}
+          {/* Radar chart — first, like lovable */}
           {radarData.length > 0 && (
-            <div className="cmp-radar-card">
-              <h3 className="cmp-section-title">Relative Strength Radar</h3>
-              <p className="cmp-radar-note">Normalized 0–100 across selected stocks. Higher = better (Debt is inverted).</p>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                  <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                  {stocks.map((_, i) => (
-                    <Radar
-                      key={i}
-                      dataKey={`s${i}`}
-                      stroke={CHIP_COLORS[i]}
-                      fill={CHIP_COLORS[i]}
-                      fillOpacity={0.12}
-                      strokeWidth={1.5}
+            <div className="cmp-card">
+              <h3 className="cmp-card-hdr">Multi-Dimensional Comparison</h3>
+              <p className="cmp-card-sub">
+                Normalized 0–100 across selected stocks. Higher = better (Debt is inverted).
+              </p>
+              <div className="cmp-radar-wrap">
+                <ResponsiveContainer width="100%" height={288}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke="hsl(217, 20%, 20%)" />
+                    <PolarAngleAxis
+                      dataKey="metric"
+                      tick={{ fill: 'hsl(215, 16%, 55%)', fontSize: 11 }}
                     />
-                  ))}
-                  <ReTooltip
-                    contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 12 }}
-                    labelStyle={{ color: '#e5e7eb' }}
-                    itemStyle={{ color: '#9ca3af' }}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* ── AI comparison ── */}
-          {data.ai_comparison && (
-            <div className="cmp-ai-card">
-              <h3 className="cmp-section-title">
-                <Brain size={16} /> AI Comparison
-              </h3>
-              <div className="cmp-ai-body markdown-body">
-                <ReactMarkdown>{data.ai_comparison}</ReactMarkdown>
+                    {stocks.map((s, i) => (
+                      <Radar
+                        key={i}
+                        name={s.symbol?.replace('.NS', '')}
+                        dataKey={`s${i}`}
+                        stroke={CHIP_COLORS[i]}
+                        fill={CHIP_COLORS[i]}
+                        fillOpacity={0.1}
+                        strokeWidth={2}
+                      />
+                    ))}
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}
 
-          {/* ── Links ── */}
-          <div className="cmp-links-row">
+          {/* Metrics table */}
+          <div className="cmp-card">
+            <h3 className="cmp-card-hdr">Fundamentals Comparison</h3>
+            <div className="cmp-table-scroll">
+              <table className="cmp-table">
+                <thead>
+                  <tr>
+                    <th className="cmp-th cmp-th--metric">Metric</th>
+                    {stocks.map((s, i) => (
+                      <th key={s.symbol} className="cmp-th" style={{ color: CHIP_COLORS[i] }}>
+                        <span className="cmp-th-sym">{s.symbol?.replace('.NS', '')}</span>
+                        <span className="cmp-th-name">{s.name}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {METRICS.map(({ key, label, fmt: fmtFn, best }) => {
+                    const bestIdx = getBestIndex(stocks, key, best);
+                    return (
+                      <tr key={key}>
+                        <td className="cmp-td cmp-td--metric">{label}</td>
+                        {stocks.map((s, i) => (
+                          <td
+                            key={s.symbol}
+                            className={`cmp-td${i === bestIdx ? ' cmp-td--best' : ''}`}
+                          >
+                            {fmtFn(s[key])}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* AI comparison */}
+          {data.ai_comparison && (
+            <div className="cmp-card cmp-card--ai">
+              <h3 className="cmp-card-hdr">
+                <Sparkles size={15} className="cmp-sparkle" />
+                AI Comparison Summary
+              </h3>
+              <div className="cmp-md">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {data.ai_comparison}
+                </ReactMarkdown>
+              </div>
+            </div>
+          )}
+
+          {/* Detail links */}
+          <div className="cmp-links">
             {stocks.map((s, i) => (
               <Link
                 key={s.symbol}
-                className="cmp-detail-link"
+                className="cmp-link-btn"
                 to={`/stock/${s.symbol}`}
-                style={{ borderColor: CHIP_COLORS[i] }}
+                style={{ '--link-color': CHIP_COLORS[i] }}
               >
-                View {s.symbol?.replace('.NS', '')} detail →
+                View {s.symbol?.replace('.NS', '')} →
               </Link>
             ))}
           </div>

@@ -3,15 +3,15 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.82rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   padding: 0.5rem 0;
   flex-wrap: wrap;
 }
 
-.wlm-empty svg { color: #374151; }
+.wlm-empty svg { color: var(--text-secondary); }
 
 .wlm-empty a {
-  color: #818cf8;
+  color: var(--accent-blue);
   text-decoration: none;
 }
 .wlm-empty a:hover { text-decoration: underline; }
@@ -37,28 +37,29 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.7rem;
-  background: #111827;
-  border: 1px solid #1f2937;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
   border-radius: 8px;
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   cursor: pointer;
 }
 
 .wlm-chip:hover {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--bg-card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .wlm-sym {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .wlm-price {
   font-size: 0.78rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -70,18 +71,18 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.wlm-chg.up { color: #10b981; }
-.wlm-chg.dn { color: #ef4444; }
+.wlm-chg.up { color: var(--success); }
+.wlm-chg.dn { color: var(--danger); }
 
 .wlm-view-all {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-decoration: none;
   white-space: nowrap;
   transition: color 0.15s;
   flex-shrink: 0;
 }
-.wlm-view-all:hover { color: #818cf8; }
+.wlm-view-all:hover { color: var(--accent-blue); }

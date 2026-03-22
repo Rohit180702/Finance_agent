@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import './TopBar.css';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, MessageSquare, Search, X } from 'lucide-react';
+import { Menu, Search, X, Sun, Moon } from 'lucide-react';
 import { isMarketOpen } from '../../hooks/useMarketOverview';
 import { searchStocks } from '../../services/stockDetailApi';
 
 const PAGE_META = {
-  '/':            { title: 'Dashboard',            subtitle: 'Market overview and quick access' },
-  '/technical':   { title: 'Technical Analysis',   subtitle: 'Indicators, chart patterns, and setups' },
-  '/fundamental': { title: 'Fundamental Analysis', subtitle: 'Financial statements and key ratios' },
-  '/sentiment':   { title: 'Sentiment Analysis',   subtitle: 'News momentum and market tone' },
-  '/screener':    { title: 'Stock Screener',        subtitle: 'Filter NSE stocks by fundamentals and technicals' },
-  '/compare':     { title: 'Compare Stocks',        subtitle: 'Side-by-side AI comparison' },
-  '/etf':         { title: 'ETFs',                  subtitle: '307 NSE-listed Exchange Traded Funds' },
+  '/':            { title: 'AI Research Assistant',  subtitle: 'Ask anything about Indian stocks, sectors, or market trends.' },
+  '/technical':   { title: 'Technical Analysis',    subtitle: 'Indicators, chart patterns, and setups' },
+  '/fundamental': { title: 'Fundamental Analysis',  subtitle: 'Financial statements and key ratios' },
+  '/sentiment':   { title: 'Sentiment Analysis',    subtitle: 'News momentum and market tone' },
+  '/screener':    { title: 'Stock Screener',         subtitle: 'Filter NSE stocks by fundamentals and technicals' },
+  '/compare':     { title: 'Compare Stocks',         subtitle: 'Side-by-side AI comparison' },
+  '/watchlist':   { title: 'Watchlist',              subtitle: 'Track your favorite stocks' },
+  '/news':        { title: 'Market News',            subtitle: 'Latest financial news and updates' },
 };
 
-// ── Global stock search ────────────────────────────────────────────────────────
 function GlobalSearch() {
   const navigate    = useNavigate();
   const inputRef    = useRef(null);
@@ -23,7 +23,7 @@ function GlobalSearch() {
   const [query,     setQuery]   = useState('');
   const [results,   setResults] = useState([]);
   const [open,      setOpen]    = useState(false);
-  const [active,    setActive]  = useState(-1); // keyboard cursor index
+  const [active,    setActive]  = useState(-1);
 
   const close = useCallback(() => { setOpen(false); setActive(-1); }, []);
 
@@ -58,12 +58,22 @@ function GlobalSearch() {
     if (e.key === 'Escape')    { close(); inputRef.current?.blur(); }
   };
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e) => { if (!e.target.closest('.gsearch-wrap')) close(); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [close]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   return (
     <div className="gsearch-wrap">
@@ -107,8 +117,7 @@ function GlobalSearch() {
   );
 }
 
-// ── TopBar ─────────────────────────────────────────────────────────────────────
-const TopBar = ({ onMenuClick, onChatToggle }) => {
+const TopBar = ({ onMenuClick, theme, onToggleTheme }) => {
   const location = useLocation();
   const meta = PAGE_META[location.pathname] ?? { title: location.pathname.replace('/', ''), subtitle: '' };
   const [now, setNow] = useState(new Date());
@@ -135,6 +144,14 @@ const TopBar = ({ onMenuClick, onChatToggle }) => {
       </div>
 
       <div className="app-topbar-right">
+        <button
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
         <span className="topbar-pill">NSE · BSE</span>
         <span className={`topbar-pill ${isMarketOpen() ? 'pill-open' : 'pill-closed'}`}>
           {isMarketOpen() ? '● Open' : '● Closed'}
@@ -142,9 +159,6 @@ const TopBar = ({ onMenuClick, onChatToggle }) => {
         <span className="topbar-pill">
           {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
-        <button className="icon-btn chat-btn" onClick={onChatToggle} aria-label="Open AI chat">
-          <MessageSquare size={15} />
-        </button>
       </div>
     </header>
   );

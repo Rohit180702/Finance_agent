@@ -1,80 +1,77 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 import {
-  LayoutDashboard,
-  TrendingUp,
-  BarChart3,
-  Newspaper,
-  SlidersHorizontal,
-  MessageSquare,
-  GitCompare,
-  Star,
-  X,
+  Sparkles, SlidersHorizontal, GitCompare, Star,
+  X, Newspaper, MessageSquare,
 } from 'lucide-react';
 
-const NAV_WORKSPACE = [
-  { to: '/',          icon: LayoutDashboard,  label: 'Dashboard' },
-  { to: '/watchlist', icon: Star,             label: 'Watchlist' },
+const RECENT_KEY = 'finance_agent_recent_chats';
+const MAX_RECENT = 5;
+
+export function getRecentChats() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  } catch { return []; }
+}
+
+export function addRecentChat(query) {
+  if (!query || query.trim().length < 3) return;
+  const clean = query.replace(/^(fundamental analysis:|technical analysis:|sentiment analysis:)\s*/gi, '').trim();
+  if (!clean) return;
+  const prev = getRecentChats().filter(q => q !== clean);
+  const next = [clean, ...prev].slice(0, MAX_RECENT);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event('recent-chats-updated'));
+}
+
+export function clearRecentChats() {
+  localStorage.removeItem(RECENT_KEY);
+  window.dispatchEvent(new Event('recent-chats-updated'));
+}
+
+const NAV_ITEMS = [
+  { to: '/',          icon: Sparkles,          label: 'AI Research' },
   { to: '/screener',  icon: SlidersHorizontal, label: 'Screener' },
-  { to: '/news',      icon: Newspaper,         label: 'News' },
+  { to: '/watchlist',  icon: Star,             label: 'Watchlist' },
   { to: '/compare',   icon: GitCompare,        label: 'Compare' },
+  { to: '/news',      icon: Newspaper,         label: 'Market News' },
 ];
 
-const NAV_ANALYSIS = [
-  { to: '/technical',   icon: TrendingUp, label: 'Technical' },
-  { to: '/fundamental', icon: BarChart3,  label: 'Fundamental' },
-  { to: '/sentiment',   icon: Newspaper,  label: 'Sentiment (soon)' },
-];
+const Sidebar = ({ isOpen, onClose }) => {
+  const [recents, setRecents] = useState(getRecentChats);
 
-const Sidebar = ({ isOpen, onClose, onChatOpen }) => (
-  <aside className={`app-sidebar ${isOpen ? 'is-open' : ''}`}>
-    {/* Brand */}
-    <div className="app-brand">
-      <div className="app-brand-mark">FA</div>
-      <div className="app-brand-text">
-        <span className="app-brand-name">Finance Agent</span>
-      </div>
-      <button className="sidebar-x" onClick={onClose} aria-label="Close sidebar">
-        <X size={15} />
-      </button>
-    </div>
+  useEffect(() => {
+    const refresh = () => setRecents(getRecentChats());
+    window.addEventListener('recent-chats-updated', refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener('recent-chats-updated', refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
 
-    {/* Navigation */}
-    <nav className="app-nav" aria-label="Primary navigation">
-      <div className="nav-group">
-        <span className="nav-group-label">Workspace</span>
-        {NAV_WORKSPACE.map(({ to, icon: Icon, label, soon }) =>
-          soon ? (
-            <div key={to} className="app-nav-item is-disabled">
-              <Icon size={15} />
-              <span>{label}</span>
-              <span className="nav-badge">Soon</span>
-            </div>
-          ) : (
-            <NavLink
-              key={to}
-              to={to}
-              end
-              className={({ isActive }) =>
-                `app-nav-item${isActive ? ' is-active' : ''}`
-              }
-              onClick={onClose}
-            >
-              <Icon size={15} />
-              <span>{label}</span>
-            </NavLink>
-          )
-        )}
+  return (
+    <aside className={`app-sidebar ${isOpen ? 'is-open' : ''}`}>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-icon">FA</div>
+        <span className="sidebar-brand-name">FinAgent</span>
+        <button className="sidebar-x" onClick={onClose} aria-label="Close sidebar">
+          <X size={15} />
+        </button>
       </div>
 
-      <div className="nav-group">
-        <span className="nav-group-label">Analysis</span>
-        {NAV_ANALYSIS.map(({ to, icon: Icon, label }) => (
+      {/* Navigation */}
+      <nav className="sidebar-nav" aria-label="Primary navigation">
+        <span className="sidebar-nav-label">Workspace</span>
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
+            end={to === '/'}
             className={({ isActive }) =>
-              `app-nav-item${isActive ? ' is-active' : ''}`
+              `sidebar-nav-item${isActive ? ' is-active' : ''}`
             }
             onClick={onClose}
           >
@@ -82,17 +79,27 @@ const Sidebar = ({ isOpen, onClose, onChatOpen }) => (
             <span>{label}</span>
           </NavLink>
         ))}
-      </div>
-    </nav>
 
-    {/* Chat opener */}
-    <div className="app-sidebar-footer">
-      <button className="chat-open-btn" onClick={onChatOpen}>
-        <MessageSquare size={15} />
-        <span>AI Chat</span>
-      </button>
-    </div>
-  </aside>
-);
+        {recents.length > 0 && (
+          <>
+            <span className="sidebar-nav-label">Recent</span>
+            {recents.map((query, i) => (
+              <NavLink
+                key={`${query}-${i}`}
+                to="/"
+                end
+                className="sidebar-nav-item sidebar-recent-item"
+                onClick={onClose}
+              >
+                <MessageSquare size={13} />
+                <span className="sidebar-recent-text">{query}</span>
+              </NavLink>
+            ))}
+          </>
+        )}
+      </nav>
+    </aside>
+  );
+};
 
 export default Sidebar;

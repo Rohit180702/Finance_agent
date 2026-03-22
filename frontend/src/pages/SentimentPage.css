@@ -1,3 +1,4 @@
+/* ─────────────────────────────────────────────────────────────────────────────
    SENTIMENT ANALYSIS
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -46,16 +47,16 @@
   appearance: none;
 }
 
-.trend-bar-wrap progress::-webkit-progress-bar  { border-radius: 5px; background: rgba(51, 65, 85, 0.4); }
-.trend-bar-wrap progress::-webkit-progress-value { border-radius: 5px; background: linear-gradient(180deg, #22d3ee, #0284c7); }
-.trend-bar-wrap progress::-moz-progress-bar       { border-radius: 5px; background: linear-gradient(180deg, #22d3ee, #0284c7); }
+.trend-bar-wrap progress::-webkit-progress-bar  { border-radius: 5px; background: var(--bg-muted); }
+.trend-bar-wrap progress::-webkit-progress-value { border-radius: 5px; background: linear-gradient(180deg, var(--accent-blue), color-mix(in srgb, var(--accent-blue) 65%, var(--text-primary))); }
+.trend-bar-wrap progress::-moz-progress-bar       { border-radius: 5px; background: linear-gradient(180deg, var(--accent-blue), color-mix(in srgb, var(--accent-blue) 65%, var(--text-primary))); }
 
 .trend-bar-wrap span { font-size: 10px; color: var(--text-tertiary); }
 
 .headline-list { display: flex; flex-direction: column; gap: 8px; }
 
 .headline-list li {
-  border-left: 2px solid rgba(59, 130, 246, 0.3);
+  border-left: 2px solid color-mix(in srgb, var(--accent-blue) 35%, transparent);
   padding: 6px 0 6px 10px;
   color: var(--text-secondary);
   font-size: 13px;

@@ -5,7 +5,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(21, 25, 34, 0.95), rgba(15, 17, 21, 0.97));
+  background: var(--bg-card);
   box-shadow: var(--shadow-sm);
   position: relative;
 }
@@ -14,7 +14,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 42%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-muted) 80%, transparent), transparent 42%);
   pointer-events: none;
 }
 
@@ -23,9 +23,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(35, 48, 69, 0.7);
+  border-bottom: 1px solid var(--border);
   padding: 14px 16px;
-  background: rgba(15, 17, 21, 0.35);
+  background: var(--bg-muted);
 }
 
 .chat-titlebar h3 {
@@ -43,7 +43,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(15, 17, 21, 0.22);
+  background: var(--bg);
 }
 
 .chat-messages-list {
@@ -65,20 +65,21 @@
   padding: 11px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(18, 23, 32, 0.8);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .chat-message-row.is-user .chat-message-bubble {
-  background: rgba(63, 143, 199, 0.14);
-  border-color: rgba(92, 164, 214, 0.35);
+  background: var(--accent-blue-light);
+  border-color: color-mix(in srgb, var(--accent-blue) 30%, transparent);
 }
 
 /* Extended Thinking Section */
 .thinking-section {
   margin-bottom: 12px;
   padding: 10px 12px;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: var(--accent-blue-light);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 22%, transparent);
   border-radius: var(--radius-sm);
 }
 
@@ -86,7 +87,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(147, 197, 253, 0.9);
+  color: var(--accent-blue);
   user-select: none;
   list-style: none;
   display: flex;
@@ -99,15 +100,15 @@
 }
 
 .thinking-section summary:hover {
-  color: rgba(147, 197, 253, 1);
+  color: color-mix(in srgb, var(--accent-blue) 85%, var(--text-primary));
 }
 
 .thinking-content {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(59, 130, 246, 0.15);
+  border-top: 1px solid color-mix(in srgb, var(--accent-blue) 18%, transparent);
   font-size: 13px;
-  color: rgba(203, 213, 225, 0.85);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -116,7 +117,7 @@
 }
 
 .thinking-content code {
-  background: rgba(15, 17, 21, 0.5);
+  background: var(--bg-muted);
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 12px;
@@ -161,7 +162,7 @@
 }
 
 .message-content code {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-muted);
   padding: 0.15em 0.4em;
   border-radius: 4px;
   font-family: 'Monaco', 'Courier New', monospace;
@@ -169,11 +170,12 @@
 }
 
 .message-content pre {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-muted);
   padding: 0.75em;
   border-radius: 6px;
   overflow-x: auto;
   margin: 0.75em 0;
+  border: 1px solid var(--border-light);
 }
 
 .message-content pre code {
@@ -191,19 +193,19 @@
 }
 
 .message-content blockquote {
-  border-left: 3px solid rgba(92, 164, 214, 0.5);
+  border-left: 3px solid color-mix(in srgb, var(--accent-blue) 45%, transparent);
   padding-left: 1em;
   margin: 0.75em 0;
   color: var(--text-secondary);
 }
 
 .message-content a {
-  color: #5ca4d6;
+  color: var(--accent-blue);
   text-decoration: underline;
 }
 
 .message-content a:hover {
-  color: #7bb8e3;
+  color: color-mix(in srgb, var(--accent-blue) 80%, var(--text-primary));
 }
 
 .message-content hr {
@@ -226,7 +228,7 @@
 }
 
 .message-content th {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-muted);
   font-weight: 600;
 }
 
@@ -278,7 +280,7 @@
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
-  background: rgba(15, 17, 21, 0.72);
+  background: var(--bg-muted);
 }
 
 .chat-composer textarea {
@@ -297,16 +299,17 @@
 .chat-prompt-pill {
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(30, 41, 59, 0.55);
+  background: var(--bg-card);
   color: var(--text-secondary);
   padding: 5px 10px;
   cursor: pointer;
   font-size: 12px;
+  box-shadow: var(--shadow-sm);
 }
 
 .chat-prompt-pill:hover {
-  border-color: rgba(92, 164, 214, 0.42);
-  color: #e9f1fb;
+  border-color: color-mix(in srgb, var(--accent-blue) 35%, transparent);
+  color: var(--text-primary);
 }
 
 /* ── Streaming cursor ──────────────────────────────────────────── */
@@ -314,7 +317,7 @@
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: var(--accent, #5ca4d6);
+  background: var(--accent-blue);
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: blink 0.8s step-end infinite;
@@ -327,7 +330,7 @@
 
 /* Subtle pulsing outline for a bubble that's still receiving tokens */
 .chat-message-bubble.is-streaming {
-  box-shadow: 0 0 0 1px rgba(92, 164, 214, 0.25);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 28%, transparent);
 }
 
 /* ── Tool-call status badge ────────────────────────────────────── */
@@ -337,8 +340,8 @@
   gap: 8px;
   padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(92, 164, 214, 0.3);
-  background: rgba(92, 164, 214, 0.08);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 32%, transparent);
+  background: var(--accent-blue-light);
   color: var(--text-secondary);
   font-size: 12px;
   margin: 4px 0 4px 8px;
@@ -347,8 +350,8 @@
 .chat-tool-spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(92, 164, 214, 0.25);
-  border-top-color: #5ca4d6;
+  border: 2px solid color-mix(in srgb, var(--accent-blue) 28%, transparent);
+  border-top-color: var(--accent-blue);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;

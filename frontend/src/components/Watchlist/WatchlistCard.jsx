@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import {
   Star, TrendingUp, TrendingDown, X, RefreshCw,
   ExternalLink, Plus, Pencil, Trash2, Check, Search, Loader2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useWatchlist } from '../../hooks/useWatchlist';
 import { getStockMetrics, searchStocks } from '../../services/stockDetailApi';
-import Skeleton from '../ui/Skeleton';
 import './WatchlistCard.css';
 
-const fmt   = (v, d = 2) => { const n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(d); };
 const fmtP  = (v) => v != null ? `₹${parseFloat(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+const fmt   = (v, d = 2) => { const n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(d); };
 const fmtCr = (v) => {
   const n = parseFloat(v);
   if (isNaN(n)) return '—';
@@ -19,7 +19,6 @@ const fmtCr = (v) => {
   return `₹${n.toFixed(0)} Cr`;
 };
 
-/* ── inline-rename tab ───────────────────────────────────────────────────── */
 const ListTab = ({ list, active, onActivate, onRename, onDelete }) => {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(list.name);
@@ -44,11 +43,7 @@ const ListTab = ({ list, active, onActivate, onRename, onDelete }) => {
   };
 
   return (
-    <div
-      className={`wl-tab${active ? ' active' : ''}`}
-      onClick={onActivate}
-      title={list.name}
-    >
+    <div className={`wl-tab${active ? ' active' : ''}`} onClick={onActivate}>
       {editing ? (
         <input
           ref={inputRef}
@@ -60,7 +55,10 @@ const ListTab = ({ list, active, onActivate, onRename, onDelete }) => {
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="wl-tab-name">{list.name}</span>
+        <>
+          <span className="wl-tab-name">{list.name}</span>
+          <span className="wl-tab-count">({list.symbols.length})</span>
+        </>
       )}
 
       {active && (
@@ -87,7 +85,6 @@ const ListTab = ({ list, active, onActivate, onRename, onDelete }) => {
   );
 };
 
-/* ── add stock search bar ─────────────────────────────────────────────────── */
 const AddStockBar = ({ onAdd }) => {
   const [query,     setQuery]     = useState('');
   const [results,   setResults]   = useState([]);
@@ -126,7 +123,7 @@ const AddStockBar = ({ onAdd }) => {
   return (
     <div className="wl-add-wrap" ref={wrapRef}>
       <div className="wl-add-input-row">
-        <Search size={13} className="wl-add-icon" />
+        <Search size={14} className="wl-add-icon" />
         <input
           className="wl-add-input"
           placeholder="Search and add stock…"
@@ -134,7 +131,7 @@ const AddStockBar = ({ onAdd }) => {
           onChange={(e) => { setQuery(e.target.value); runSearch(e.target.value); }}
           onFocus={() => results.length && setOpen(true)}
         />
-        {searching && <Loader2 size={13} className="wl-add-spinner" />}
+        {searching && <Loader2 size={14} className="wl-add-spinner" />}
       </div>
       {open && results.length > 0 && (
         <ul className="wl-add-dropdown">
@@ -150,7 +147,6 @@ const AddStockBar = ({ onAdd }) => {
   );
 };
 
-/* ── main card ───────────────────────────────────────────────────────────── */
 const WatchlistCard = () => {
   const {
     lists, activeListId, activeList,
@@ -162,6 +158,30 @@ const WatchlistCard = () => {
   const [rows,       setRows]       = useState({});
   const [loading,    setLoading]    = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [canScrollLeft,  setCanScrollLeft]  = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabsRef = useRef(null);
+
+  const checkScroll = useCallback(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll);
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', checkScroll); ro.disconnect(); };
+  }, [checkScroll, lists]);
+
+  const scrollTabs = (dir) => {
+    tabsRef.current?.scrollBy({ left: dir * 150, behavior: 'smooth' });
+  };
 
   const fetchAll = useCallback(async (isRefresh = false) => {
     if (!symbols.length) { setRows({}); return; }
@@ -187,10 +207,14 @@ const WatchlistCard = () => {
 
   return (
     <div className="wl-card">
-
-      {/* ── list tabs ── */}
+      {/* Tabs */}
       <div className="wl-tabs-bar">
-        <div className="wl-tabs">
+        {canScrollLeft && (
+          <button className="wl-scroll-btn" onClick={() => scrollTabs(-1)}>
+            <ChevronLeft size={14} />
+          </button>
+        )}
+        <div className="wl-tabs" ref={tabsRef}>
           {lists.map((l) => (
             <ListTab
               key={l.id}
@@ -202,98 +226,97 @@ const WatchlistCard = () => {
             />
           ))}
         </div>
+        {canScrollRight && (
+          <button className="wl-scroll-btn" onClick={() => scrollTabs(1)}>
+            <ChevronRight size={14} />
+          </button>
+        )}
         <button className="wl-new-list-btn" onClick={() => createList()} title="New watchlist">
-          <Plus size={13} /> New list
+          <Plus size={14} /> New list
         </button>
       </div>
 
-      {/* ── add stock bar ── */}
+      {/* Add stock */}
       <div className="wl-add-section">
         <AddStockBar onAdd={(sym) => addSymbol(sym, activeListId)} />
       </div>
 
-      {/* ── empty state ── */}
+      {/* Empty state */}
       {!symbols.length ? (
         <div className="wl-empty">
-          <Star size={22} className="wl-empty-icon" />
+          <Star size={28} className="wl-empty-icon" />
           <p className="wl-empty-title">"{activeList?.name}" is empty</p>
           <p className="wl-empty-sub">Search for a stock above to add it.</p>
         </div>
       ) : (
         <>
-          {/* ── top bar ── */}
+          {/* Count + refresh */}
           <div className="wl-topbar">
-            <span className="wl-count">{symbols.length} stock{symbols.length !== 1 ? 's' : ''}</span>
+            <span className="wl-count">
+              {symbols.length} stock{symbols.length !== 1 ? 's' : ''}
+            </span>
             <button
               className={`wl-refresh${refreshing ? ' spinning' : ''}`}
               onClick={() => fetchAll(true)}
               title="Refresh prices"
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={13} />
             </button>
           </div>
 
-          {/* ── table ── */}
-          <div className="wl-table-wrap">
-            <table className="wl-table">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th className="right">Price</th>
-                  <th className="right">Change</th>
-                  <th className="right">Mkt Cap</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {symbols.map((sym) => {
-                  const m = rows[sym];
-                  if (loading && !m) {
-                    return (
-                      <tr key={sym}>
-                        <td colSpan={6}>
-                          <Skeleton style={{ height: '1.4rem', borderRadius: '4px' }} />
-                        </td>
-                      </tr>
-                    );
-                  }
-                  const isUp  = parseFloat(m?.change_pct) >= 0;
-                  const clean = sym.replace('.NS', '').replace('.BO', '');
+          {/* Stock cards */}
+          <div className="wl-stock-list">
+            {symbols.map((sym) => {
+              const m = rows[sym];
 
-                  return (
-                    <tr key={sym} className="wl-row">
-                      <td>
-                        <Link to={`/stock/${sym}`} className="wl-sym-link">{clean}</Link>
-                      </td>
-                      <td className="wl-name" title={m?.name}>{m?.name || '—'}</td>
-                      <td className="right wl-price">{fmtP(m?.price)}</td>
-                      <td className={`right wl-change ${m ? (isUp ? 'up' : 'dn') : ''}`}>
-                        {m ? (
-                          <>
-                            {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                            {isUp ? '+' : ''}{fmt(m.change_pct)}%
-                          </>
-                        ) : '—'}
-                      </td>
-                      <td className="right wl-mcap">{fmtCr(m?.market_cap_cr)}</td>
-                      <td className="wl-actions">
-                        <Link to={`/stock/${sym}`} className="wl-detail-btn" title="View detail">
-                          <ExternalLink size={12} />
-                        </Link>
-                        <button
-                          className="wl-remove-btn"
-                          onClick={() => removeSymbol(sym, activeListId)}
-                          title="Remove"
-                        >
-                          <X size={12} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              if (loading && !m) {
+                return <div key={sym} className="wl-skeleton-card" />;
+              }
+
+              const isUp  = parseFloat(m?.change_pct) >= 0;
+              const clean = sym.replace('.NS', '').replace('.BO', '');
+
+              return (
+                <Link key={sym} to={`/stock/${sym}`} className="wl-stock-card">
+                  <div className="wl-stock-info">
+                    <div className="wl-stock-symbol">{clean}</div>
+                    <div className="wl-stock-name">{m?.name || '—'}</div>
+                  </div>
+
+                  <div className="wl-stock-mcap">{fmtCr(m?.market_cap_cr)}</div>
+
+                  <div className="wl-stock-price-col">
+                    <div className="wl-stock-price">{fmtP(m?.price)}</div>
+                    <div className={`wl-stock-change ${m ? (isUp ? 'up' : 'dn') : ''}`}>
+                      {m ? (
+                        <>
+                          {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                          {isUp ? '+' : ''}{fmt(m.change_pct)}%
+                        </>
+                      ) : '—'}
+                    </div>
+                  </div>
+
+                  <div className="wl-stock-actions" onClick={(e) => e.preventDefault()}>
+                    <Link
+                      to={`/stock/${sym}`}
+                      className="wl-stock-action-btn"
+                      title="View detail"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink size={13} />
+                    </Link>
+                    <button
+                      className="wl-stock-action-btn danger"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeSymbol(sym, activeListId); }}
+                      title="Remove"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

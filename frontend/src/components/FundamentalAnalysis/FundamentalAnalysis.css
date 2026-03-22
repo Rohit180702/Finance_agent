@@ -2,7 +2,7 @@
   width: 100%;
   min-height: 100vh;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  background: linear-gradient(135deg, var(--accent-blue-light) 0%, var(--accent-light) 100%);
 }
 
 .fundamental-analysis-content {
@@ -12,8 +12,8 @@
 
 /* Error Message */
 .error-message {
-  background: #fff5f5;
-  border: 2px solid #fc8181;
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-card));
+  border: 2px solid var(--danger);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -44,14 +44,14 @@
 }
 
 .error-content h3 {
-  color: #c53030;
+  color: var(--danger);
   font-size: 1.125rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .error-content p {
-  color: #742a2a;
+  color: color-mix(in srgb, var(--danger) 75%, var(--text-primary));
   font-size: 0.95rem;
   line-height: 1.5;
 }
@@ -59,7 +59,7 @@
 .error-close {
   background: none;
   border: none;
-  color: #c53030;
+  color: var(--danger);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
@@ -73,7 +73,7 @@
 }
 
 .error-close:hover {
-  background: #feb2b2;
+  background: color-mix(in srgb, var(--danger) 18%, var(--bg-card));
 }
 
 /* Markdown content styling in commentary panel */
@@ -115,7 +115,7 @@
 }
 
 .commentary-panel code {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-muted);
   padding: 0.15em 0.4em;
   border-radius: 4px;
   font-family: 'Monaco', 'Courier New', monospace;
@@ -123,7 +123,7 @@
 }
 
 .commentary-panel pre {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-muted);
   padding: 0.75em;
   border-radius: 6px;
   overflow-x: auto;
@@ -144,19 +144,19 @@
 }
 
 .commentary-panel blockquote {
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--accent-blue);
   padding-left: 1em;
   margin: 0.75em 0;
   color: var(--text-secondary);
 }
 
 .commentary-panel a {
-  color: #667eea;
+  color: var(--accent-blue);
   text-decoration: underline;
 }
 
 .commentary-panel a:hover {
-  color: #764ba2;
+  color: color-mix(in srgb, var(--accent-blue) 80%, var(--text-primary));
 }
 
 .commentary-panel hr {
@@ -179,7 +179,7 @@
 }
 
 .commentary-panel th {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-muted);
   font-weight: 600;
 }
 

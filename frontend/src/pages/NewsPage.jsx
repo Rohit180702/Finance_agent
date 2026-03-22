@@ -1,27 +1,61 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import './News.css';
 import { Loader2, Newspaper, ExternalLink, AlertCircle } from 'lucide-react';
 import { getMarketNews } from '../services/newsApi';
 
-function NewsCard({ item }) {
-  const date = item.pub_date
-    ? new Date(item.pub_date).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true,
-      })
-    : null;
+function timeAgo(dateStr) {
+  if (!dateStr) return null;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function SkeletonCards({ count = 6 }) {
+  return (
+    <div className="nw-skeleton">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="nw-skel-card">
+          <div className="nw-skel-bar nw-skel-bar--med" />
+          <div className="nw-skel-bar nw-skel-bar--short" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NewsCard({ item, style }) {
+  const ago = timeAgo(item.pub_date);
 
   return (
-    <a className="np-card" href={item.url} target="_blank" rel="noreferrer">
+    <a
+      className="nw-card"
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      style={style}
+    >
       {item.thumbnail && (
-        <img className="np-card-thumb" src={item.thumbnail} alt="" loading="lazy" />
+        <img
+          className="nw-card-thumb"
+          src={item.thumbnail}
+          alt=""
+          loading="lazy"
+          onError={e => { e.target.style.display = 'none'; }}
+        />
       )}
-      <div className="np-card-body">
-        <p className="np-card-title">{item.title}</p>
-        {item.summary && <p className="np-card-summary">{item.summary}</p>}
-        <div className="np-card-meta">
-          {item.publisher && <span className="np-publisher">{item.publisher}</span>}
-          {date && <span className="np-date">{date}</span>}
-          <ExternalLink size={11} className="np-ext" />
+      <div className="nw-card-body">
+        <p className="nw-card-title">{item.title}</p>
+        {item.summary && <p className="nw-card-summary">{item.summary}</p>}
+        <div className="nw-card-meta">
+          {item.publisher && <span className="nw-publisher">{item.publisher}</span>}
+          {item.publisher && ago && <span className="nw-dot">·</span>}
+          {ago && <span className="nw-date">{ago}</span>}
+          <ExternalLink size={11} className="nw-ext" />
         </div>
       </div>
     </a>
@@ -61,10 +95,8 @@ export default function NewsPage() {
     }
   }, [loading]);
 
-  // Initial load
   useEffect(() => { loadPage(0); }, []); // eslint-disable-line
 
-  // IntersectionObserver — load next page when sentinel enters view
   useEffect(() => {
     if (!sentinelRef.current) return;
     const obs = new IntersectionObserver(
@@ -80,40 +112,44 @@ export default function NewsPage() {
   }, [hasMore, loading, page, loadPage]);
 
   return (
-    <div className="np-page">
-      <div className="np-header">
-        <div className="np-header-left">
-          <Newspaper size={20} />
-          <h1 className="np-title">Market News</h1>
-        </div>
+    <div className="nw-page">
+
+      {/* Header */}
+      <div className="nw-header">
+        <Newspaper size={20} className="nw-header-icon" />
+        <h1 className="nw-title">Market News</h1>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="np-error">
+        <div className="nw-error">
           <AlertCircle size={15} /> {error}
         </div>
       )}
 
+      {/* Initial skeleton */}
       {initLoading ? (
-        <div className="np-loading">
-          <Loader2 size={28} className="spin" />
-          <p>Fetching latest market news…</p>
-        </div>
+        <SkeletonCards count={6} />
       ) : (
         <>
-          <div className="np-list">
-            {news.map((item, i) => <NewsCard key={item.id || i} item={item} />)}
+          <div className="nw-list">
+            {news.map((item, i) => (
+              <NewsCard
+                key={item.id || i}
+                item={item}
+                style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
+              />
+            ))}
           </div>
 
-          {/* sentinel — triggers next page load */}
-          <div ref={sentinelRef} className="np-sentinel">
+          <div ref={sentinelRef} className="nw-sentinel">
             {loading && (
-              <div className="np-load-more">
-                <Loader2 size={18} className="spin" /> Loading more…
+              <div className="nw-load-more">
+                <Loader2 size={16} className="spin" /> Loading more…
               </div>
             )}
             {!hasMore && news.length > 0 && (
-              <p className="np-end">You've reached the end of the news feed.</p>
+              <p className="nw-end">You've reached the end of the news feed.</p>
             )}
           </div>
         </>

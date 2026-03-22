@@ -1,3 +1,4 @@
+/* ─────────────────────────────────────────────────────────────────────────────
    FUNDAMENTAL ANALYSIS
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -21,7 +22,7 @@
 .metric-card {
   border: 1px solid var(--border);
   border-radius: 11px;
-  background: rgba(15, 23, 42, 0.58);
+  background: var(--bg-card);
   padding: 10px;
 }
 
