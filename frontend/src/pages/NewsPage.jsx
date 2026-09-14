@@ -89,6 +89,9 @@ export default function NewsPage() {
       setPage(p);
     } catch {
       setError('Could not load news. Please try again.');
+      // Stop the infinite-scroll observer from retrying the same page forever —
+      // without this, a single failed request loops indefinitely.
+      setHasMore(false);
     } finally {
       setLoading(false);
       setInitLoading(false);
@@ -124,6 +127,13 @@ export default function NewsPage() {
       {error && (
         <div className="nw-error">
           <AlertCircle size={15} /> {error}
+          <button
+            type="button"
+            className="nw-retry-btn"
+            onClick={() => { setError(null); setHasMore(true); loadPage(page); }}
+          >
+            Retry
+          </button>
         </div>
       )}
 

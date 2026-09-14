@@ -162,6 +162,22 @@
   font-size: 13px;
 }
 
+.nw-retry-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nw-retry-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
 .nw-sentinel { padding: 16px 0; }
 
 .nw-load-more {

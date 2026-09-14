@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Star, TrendingUp, TrendingDown, X, RefreshCw,
-  ExternalLink, Plus, Pencil, Trash2, Check, Search, Loader2,
+  Plus, Pencil, Trash2, Check, Search, Loader2,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useWatchlist } from '../../hooks/useWatchlist';
@@ -298,14 +298,6 @@ const WatchlistCard = () => {
                   </div>
 
                   <div className="wl-stock-actions" onClick={(e) => e.preventDefault()}>
-                    <Link
-                      to={`/stock/${sym}`}
-                      className="wl-stock-action-btn"
-                      title="View detail"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink size={13} />
-                    </Link>
                     <button
                       className="wl-stock-action-btn danger"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeSymbol(sym, activeListId); }}

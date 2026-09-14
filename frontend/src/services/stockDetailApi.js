@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const BASE = '/api/v1/stocks';
+const API_ROOT = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
+const BASE = `${API_ROOT}/stocks`;
 
 export const getStockMetrics = (symbol) =>
   axios.get(`${BASE}/${encodeURIComponent(symbol)}/metrics`).then(r => r.data);
