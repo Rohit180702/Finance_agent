@@ -151,12 +151,13 @@ class AgentService:
         Stream chat response token-by-token using LangGraph astream_events.
 
         Yields dicts with keys:
-          {"type": "session",    "session_id": str}
-          {"type": "tool_start", "tool": str, "input": dict}
-          {"type": "tool_end",   "tool": str}
-          {"type": "token",      "content": str}
+          {"type": "session",      "session_id": str}
+          {"type": "tool_start",   "tool": str, "input": dict}
+          {"type": "tool_result",  "tool": str, "data": dict}
+          {"type": "tool_end",     "tool": str}
+          {"type": "token",        "content": str}
           {"type": "done"}
-          {"type": "error",      "message": str}
+          {"type": "error",        "message": str}
         """
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -198,7 +199,41 @@ class AgentService:
                     }
 
                 elif kind == "on_tool_end":
-                    yield {"type": "tool_end", "tool": event.get("name", "")}
+                    tool_name = event.get("name", "")
+                    try:
+                        raw_output = event["data"].get("output", {})
+                        if isinstance(raw_output, str):
+                            try:
+                                raw_output = json.loads(raw_output)
+                            except (json.JSONDecodeError, TypeError):
+                                raw_output = {"text": raw_output}
+
+                        if isinstance(raw_output, dict) and raw_output.get("success"):
+                            cleaned = {
+                                k: v for k, v in raw_output.items()
+                                if k not in ("raw_info", "full_statement")
+                            }
+                            if "data" in cleaned and isinstance(cleaned["data"], dict):
+                                cleaned["data"] = {
+                                    k: v for k, v in cleaned["data"].items()
+                                    if k not in ("raw_info", "full_statement")
+                                }
+                                for sub_key in ("ratios", "cashflow", "balance_sheet", "income"):
+                                    sub = cleaned["data"].get(sub_key)
+                                    if isinstance(sub, dict):
+                                        cleaned["data"][sub_key] = {
+                                            k: v for k, v in sub.items()
+                                            if k not in ("raw_info", "full_statement")
+                                        }
+                            yield {
+                                "type": "tool_result",
+                                "tool": tool_name,
+                                "data": cleaned,
+                            }
+                    except Exception as e:
+                        logger.warning("Failed to extract tool result for %s: %s", tool_name, e)
+
+                    yield {"type": "tool_end", "tool": tool_name}
 
         except Exception as exc:
             yield {"type": "error", "message": str(exc)}

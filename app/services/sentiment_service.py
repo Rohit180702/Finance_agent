@@ -29,12 +29,16 @@ def _gather_data(symbol: str) -> tuple[list, dict, dict]:
                 "publisher": (c.get("provider") or {}).get("displayName"),
             })
 
-    fi = t.fast_info
-    price_data: dict = {
-        "current":    round(fi.last_price, 2) if fi.last_price else None,
-        "week52_high": round(fi.year_high, 2) if fi.year_high else None,
-        "week52_low":  round(fi.year_low,  2) if fi.year_low  else None,
-    }
+    price_data: dict = {}
+    try:
+        fi = t.fast_info
+        price_data = {
+            "current":    round(fi.last_price, 2) if fi.last_price else None,
+            "week52_high": round(fi.year_high, 2) if fi.year_high else None,
+            "week52_low":  round(fi.year_low,  2) if fi.year_low  else None,
+        }
+    except Exception:
+        pass
     try:
         h1m = t.history(period="1mo")
         if not h1m.empty:
@@ -113,27 +117,31 @@ def _call_claude(symbol: str, news_items: list, price_data: dict, analyst: dict)
     else:
         analyst_block = "No analyst data available."
 
-    prompt = f"""You are a financial sentiment analyst for Indian stock markets.
-Analyze the following data for {clean} ({name}) and return a structured JSON sentiment report.
+    prompt = f"""Analyze sentiment for {clean} ({name}). Return ONLY valid JSON, no markdown.
 
-── RECENT NEWS ──
+RECENT NEWS:
 {news_block}
 
-── PRICE TREND ──
+PRICE TREND:
 {price_block}
 
-── ANALYST CONSENSUS ──
+ANALYST CONSENSUS:
 {analyst_block}
 
-Return ONLY a valid JSON object (no markdown, no explanation) with this exact structure:
+Return this exact JSON structure:
 {{
   "verdict": "Bullish" | "Bearish" | "Neutral",
-  "score": <integer 0-100>,
-  "drivers": [<3-4 key positive/neutral drivers as short strings>],
-  "risks": [<2-3 key risk factors as short strings>],
+  "score": <integer 0-100, where 0=extreme bearish, 50=neutral, 100=extreme bullish>,
+  "drivers": ["<3-4 bullish/positive factors as concise strings>"],
+  "risks": ["<2-3 key risk factors as concise strings>"],
   "news_sentiment": "Positive" | "Negative" | "Mixed" | "Neutral",
-  "summary": "<2-3 paragraph narrative explaining the overall sentiment>"
-}}"""
+  "news_score": <integer 0-100, sentiment from news alone>,
+  "analyst_score": <integer 0-100, sentiment from analyst consensus alone>,
+  "catalysts": ["<2-3 recent events driving price action>"],
+  "summary": "<2-3 paragraph narrative, no emojis, professional tone>"
+}}
+
+Rules: No emojis. No markdown. No explanation outside the JSON."""
 
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     msg = client.messages.create(

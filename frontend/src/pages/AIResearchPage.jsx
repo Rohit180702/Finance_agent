@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   Sparkles, Send, Trash2, Copy, Check,
-  ExternalLink, TrendingUp, TrendingDown,
-  X, Zap, BarChart3, LineChart, FileText,
-  ThumbsUp, Download, MessageSquare, Paperclip,
+  X, BarChart3, LineChart,
+  ThumbsUp, Download, Newspaper,
+  Crosshair, Eye, Paperclip,
 } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
-import { getStockMetrics, getStockSentiment } from '../services/stockDetailApi';
 import { addRecentChat } from '../components/layout/Sidebar';
+import ToolResultRenderer from '../components/ToolResults';
 import './AIResearchPage.css';
 
 const TOOL_LABELS = {
   calculate_indicator:  'Running technical indicator…',
   analyze_fundamentals: 'Fetching fundamental data…',
+  analyze_sentiment:    'Analyzing market sentiment…',
+  screen_stocks:        'Screening stocks…',
 };
 
 const SUGGESTIONS = [
@@ -30,40 +32,10 @@ const FOLLOW_UPS = [
   'What are the key risks?',
 ];
 
-const KNOWN_SYMBOLS = [
-  'RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','HINDUNILVR','ITC','SBIN',
-  'BHARTIARTL','KOTAKBANK','LT','HCLTECH','AXISBANK','ASIANPAINT','MARUTI',
-  'SUNPHARMA','TATAMOTORS','WIPRO','ULTRACEMCO','TITAN','NESTLEIND',
-  'BAJFINANCE','BAJAJFINSV','POWERGRID','NTPC','TECHM','ADANIENT','ADANIPORTS',
-  'TATASTEEL','JSWSTEEL','HINDALCO','ONGC','COALINDIA','BPCL','IOC','GRASIM',
-  'DIVISLAB','DRREDDY','CIPLA','APOLLOHOSP','EICHERMOT','HEROMOTOCO','BAJAJ-AUTO',
-  'M&M','BRITANNIA','INDUSINDBK','SBILIFE','HDFCLIFE',
-];
-
 const formatTime = (iso) => {
   if (!iso) return '';
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
-
-function extractSymbol(text) {
-  if (!text) return null;
-  const upper = text.toUpperCase();
-  for (const sym of KNOWN_SYMBOLS) {
-    if (upper.includes(sym)) return sym;
-  }
-  const match = upper.match(/\b([A-Z]{3,}(?:-[A-Z]+)?)\b/g);
-  if (match) {
-    for (const m of match) {
-      if (m.length >= 3 && !['THE','FOR','AND','NOT','ARE','BUT','HAS','WAS','CAN','HOW',
-        'WHAT','WHEN','WHICH','WITH','ABOUT','UNDER','OVER','INTO','BETWEEN','THROUGH',
-        'STOCK','STOCKS','BUY','SELL','HOLD','ANALYSIS','INDICATOR','MARKET','SECTOR',
-        'GOOD','BEST','COMPARE','RSI','MACD','SMA','EMA'].includes(m)) {
-        return m;
-      }
-    }
-  }
-  return null;
-}
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -80,128 +52,78 @@ function CopyButton({ text }) {
   );
 }
 
-/* ── Inline Insight Cards ── */
-function InsightCards({ insight }) {
-  if (!insight || insight.loading) return null;
-  const m = insight.metrics || {};
-  const s = insight.sentiment?.sentiment || {};
-  const fmtP = v => v != null ? `₹${Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+/* ── Scope Selector ── */
+const SCOPE_OPTIONS = [
+  { value: 'fundamental', label: 'Fundamental Analysis', short: 'Financials', Icon: BarChart3, desc: 'Company health, ratios, earnings' },
+  { value: 'technical',   label: 'Technical Analysis',   short: 'Charts',     Icon: LineChart, desc: 'Price action, indicators, signals' },
+  { value: 'sentiment',   label: 'Sentiment Analysis',   short: 'Sentiment',  Icon: Newspaper, desc: 'News flow, analyst views, market mood' },
+];
 
-  const verdictClass = s.verdict === 'Bullish' || s.verdict === 'Strong Buy' || s.verdict === 'Buy'
-    ? 'positive'
-    : s.verdict === 'Bearish' || s.verdict === 'Sell' || s.verdict === 'Strong Sell'
-      ? 'negative' : 'neutral';
+const SCOPE_PREFIX = {
+  fundamental: 'fundamental analysis: ',
+  technical:   'technical analysis: ',
+  sentiment:   'sentiment analysis: ',
+};
+
+function ScopeSelector({ scope, onToggle, onReset }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isAll = scope.length === 0;
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const label = isAll ? 'All' : scope.map(v => SCOPE_OPTIONS.find(o => o.value === v)?.short).join(' + ');
 
   return (
-    <div className="ai-insight-inline">
-      {/* AI Verdict */}
-      {s.verdict && s.score != null && (
-        <div className={`ai-verdict-card ${verdictClass}`}>
-          <div className="ai-verdict-header">
-            <TrendingUp size={16} />
-            <span className="ai-verdict-label">AI VERDICT</span>
-          </div>
-          <div className="ai-verdict-body">
-            <span className={`ai-verdict-text ${verdictClass}`}>{s.verdict}</span>
-            {s.score != null && (
-              <div className="ai-verdict-score">
-                <svg viewBox="0 0 36 36" className="ai-score-ring">
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.15" />
-                  <circle cx="18" cy="18" r="15.9" fill="none"
-                    stroke="currentColor" strokeWidth="2.5"
-                    strokeDasharray={`${s.score} ${100 - s.score}`}
-                    strokeLinecap="round" />
-                </svg>
-                <span className="ai-score-num">{s.score}</span>
-              </div>
-            )}
-          </div>
+    <div ref={ref} className="ai-scope-wrap">
+      <button className={`ai-scope-trigger${!isAll ? ' active' : ''}`}
+        onClick={() => setOpen(o => !o)} type="button">
+        <Crosshair size={12} />
+        <span>Scope: {label}</span>
+      </button>
+      {!isAll && scope.map(v => {
+        const opt = SCOPE_OPTIONS.find(o => o.value === v);
+        return (
+          <span key={v} className="ai-scope-chip">
+            <opt.Icon size={11} /> {opt.short}
+            <button className="ai-scope-chip-x" type="button" onClick={() => onToggle(v)}><X size={9} /></button>
+          </span>
+        );
+      })}
+      {!isAll && <button className="ai-scope-reset" type="button" onClick={onReset}>Reset</button>}
+      {open && (
+        <div className="ai-scope-dropdown">
+          <button className={`ai-scope-opt${isAll ? ' active' : ''}`} type="button"
+            onClick={() => { onReset(); setOpen(false); }}>
+            <Eye size={14} />
+            <div className="ai-scope-opt-text">
+              <span className="ai-scope-opt-label">All</span>
+              <span className="ai-scope-opt-desc">AI decides what to show</span>
+            </div>
+            {isAll && <Check size={12} />}
+          </button>
+          <div className="ai-scope-divider" />
+          {SCOPE_OPTIONS.map(opt => {
+            const isActive = scope.includes(opt.value);
+            return (
+              <button key={opt.value} type="button"
+                className={`ai-scope-opt${isActive ? ' active' : ''}`}
+                onClick={() => onToggle(opt.value)}>
+                <opt.Icon size={14} />
+                <div className="ai-scope-opt-text">
+                  <span className="ai-scope-opt-label">{opt.label}</span>
+                  <span className="ai-scope-opt-desc">{opt.desc}</span>
+                </div>
+                {isActive && <Check size={12} />}
+              </button>
+            );
+          })}
         </div>
       )}
-
-      {/* Fundamental + Technical cards side by side */}
-      <div className="ai-data-cards">
-        {(m.pe || m.roe || m.debt_equity) && (
-          <div className="ai-data-card">
-            <div className="ai-data-card-header">
-              <BarChart3 size={14} />
-              <span>Fundamental Highlights</span>
-            </div>
-            <div className="ai-data-card-body">
-              {m.pe != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">P/E Ratio</span>
-                  <span className="ai-data-value">{m.pe.toFixed(1)}</span>
-                </div>
-              )}
-              {m.roe != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">ROE</span>
-                  <span className="ai-data-value">{m.roe.toFixed(1)}%</span>
-                </div>
-              )}
-              {m.debt_equity != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">Debt to Equity</span>
-                  <span className="ai-data-value">{m.debt_equity.toFixed(2)}</span>
-                </div>
-              )}
-              {m.dividend_yield != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">Div Yield</span>
-                  <span className="ai-data-value">{m.dividend_yield.toFixed(2)}%</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {(m.price || m.week52_high) && (
-          <div className="ai-data-card">
-            <div className="ai-data-card-header">
-              <LineChart size={14} />
-              <span>Technical Signals</span>
-            </div>
-            <div className="ai-data-card-body">
-              {m.price != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">Current Price</span>
-                  <span className="ai-data-value">
-                    {fmtP(m.price)}
-                    {m.change_pct != null && (
-                      <span className={`ai-data-change ${m.change_pct >= 0 ? 'up' : 'dn'}`}>
-                        {m.change_pct >= 0 ? '+' : ''}{m.change_pct.toFixed(1)}%
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {m.week52_high != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">52W High</span>
-                  <span className="ai-data-value">{fmtP(m.week52_high)}</span>
-                </div>
-              )}
-              {m.week52_low != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">52W Low</span>
-                  <span className="ai-data-value">{fmtP(m.week52_low)}</span>
-                </div>
-              )}
-              {m.market_cap_cr != null && (
-                <div className="ai-data-row">
-                  <span className="ai-data-label">Market Cap</span>
-                  <span className="ai-data-value">₹{Number(m.market_cap_cr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <Link to={`/stock/${insight.symbol}`} className="ai-insight-view-link">
-        View Full Analysis <ExternalLink size={12} />
-      </Link>
     </div>
   );
 }
@@ -209,15 +131,29 @@ function InsightCards({ insight }) {
 /* ── Main Page ── */
 const AIResearchPage = () => {
   const { messages, loading, toolStatus, error, sendMessage, clearMessages } = useChat();
-  const [input, setInput]           = useState('');
-  const [contextSymbol, setContextSymbol] = useState(null);
-  const [insights, setInsights]     = useState({});
+  const [input, setInput] = useState('');
+  const [scope, setScope] = useState([]);
   const endRef   = useRef(null);
   const inputRef = useRef(null);
-  const fetched  = useRef(new Set());
+
+  const threadRef = useRef(null);
+  const userScrolledUp = useRef(false);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = threadRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      userScrolledUp.current = !atBottom;
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!userScrolledUp.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, loading, toolStatus]);
 
   useEffect(() => {
@@ -234,31 +170,6 @@ const AIResearchPage = () => {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Extract symbol from user messages and fetch insights
-  useEffect(() => {
-    const userMsgs = messages.filter(m => m.role === 'user');
-    if (!userMsgs.length) return;
-    const latest = userMsgs[userMsgs.length - 1];
-    const sym = extractSymbol(latest.content);
-    if (!sym || fetched.current.has(sym)) return;
-    fetched.current.add(sym);
-    setContextSymbol(sym);
-
-    setInsights(prev => ({ ...prev, [sym]: { symbol: sym, loading: true } }));
-
-    Promise.allSettled([
-      getStockMetrics(sym).catch(() => null),
-      getStockSentiment(sym).catch(() => null),
-    ]).then(([metricsRes, sentimentRes]) => {
-      const md = metricsRes.status === 'fulfilled' ? metricsRes.value : null;
-      const sd = sentimentRes.status === 'fulfilled' ? sentimentRes.value : null;
-      setInsights(prev => ({
-        ...prev,
-        [sym]: { symbol: sym, metrics: md?.metrics || null, sentiment: sd || null, loading: false },
-      }));
-    });
-  }, [messages]);
-
   const isEmpty    = messages.length === 0;
   const lastMsg    = messages[messages.length - 1];
   const streaming  = lastMsg?.role === 'assistant' && lastMsg?.streaming;
@@ -266,13 +177,23 @@ const AIResearchPage = () => {
   const canSend    = input.trim() && !loading;
   const showFollowUps = !loading && messages.length > 0 && lastMsg?.role === 'assistant' && !lastMsg?.streaming;
 
+  const handleScopeToggle = useCallback((val) => {
+    setScope(prev => prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]);
+  }, []);
+  const handleScopeReset = useCallback(() => setScope([]), []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!canSend) return;
     const raw = input.trim();
     addRecentChat(raw);
+    let text = raw;
+    if (scope.length > 0) {
+      text = scope.map(s => SCOPE_PREFIX[s] || '').join('') + text;
+    }
     setInput('');
-    sendMessage(raw);
+    userScrolledUp.current = false;
+    sendMessage(text);
   };
 
   const handleKeyDown = (e) => {
@@ -281,33 +202,20 @@ const AIResearchPage = () => {
 
   const handlePrompt = useCallback((t) => {
     setInput('');
+    userScrolledUp.current = false;
     addRecentChat(t);
     sendMessage(t);
   }, [sendMessage]);
 
   const handleNewChat = useCallback(() => {
     clearMessages();
-    setInsights({});
-    setContextSymbol(null);
-    fetched.current.clear();
+    setScope([]);
   }, [clearMessages]);
-
-  // Find insight for a message (show after the assistant message that follows a user message with a symbol)
-  const getInsightForIndex = (idx) => {
-    if (messages[idx]?.role !== 'assistant') return null;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (messages[i]?.role === 'user') {
-        const sym = extractSymbol(messages[i].content);
-        return sym ? insights[sym] : null;
-      }
-    }
-    return null;
-  };
 
   const messageRows = useMemo(
     () => messages.map((msg, i) => {
-      const insight = getInsightForIndex(i);
-      const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1;
+      const hasToolResults = msg.toolResults?.length > 0;
+      const hasContent = msg.content || hasToolResults;
 
       return (
         <div key={`${msg.timestamp || i}-${i}`} className={`ai-msg ${msg.role === 'user' ? 'is-user' : 'is-assistant'}`}>
@@ -326,20 +234,22 @@ const AIResearchPage = () => {
                   </div>
                 </details>
               )}
-              <div className="ai-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                {msg.streaming && msg.content && <span className="ai-cursor" />}
-              </div>
 
-              {/* Inline insight cards after assistant response */}
-              {msg.role === 'assistant' && !msg.streaming && insight && !insight.loading && (
-                <InsightCards insight={insight} />
+              {/* Tool result visual components -- rendered BEFORE the text */}
+              {hasToolResults && (
+                <ToolResultRenderer toolResults={msg.toolResults} />
               )}
 
-              {/* Action buttons */}
-              {!msg.streaming && msg.content && msg.role === 'assistant' && (
+              {msg.content && (
+                <div className="ai-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  {msg.streaming && msg.content && <span className="ai-cursor" />}
+                </div>
+              )}
+
+              {!msg.streaming && hasContent && msg.role === 'assistant' && (
                 <div className="ai-bubble-actions">
-                  <CopyButton text={msg.content} />
+                  <CopyButton text={msg.content || ''} />
                   <button className="ai-action-btn" title="Export PDF">
                     <Download size={13} /> <span>Export PDF</span>
                   </button>
@@ -349,7 +259,7 @@ const AIResearchPage = () => {
                 </div>
               )}
 
-              {!msg.streaming && msg.content && (
+              {!msg.streaming && hasContent && (
                 <div className="ai-bubble-footer">
                   <time>{formatTime(msg.timestamp)}</time>
                 </div>
@@ -359,13 +269,12 @@ const AIResearchPage = () => {
         </div>
       );
     }),
-    [messages, insights],
+    [messages],
   );
 
   return (
     <div className="ai-page">
       <div className="ai-chat-container">
-        {/* Top actions */}
         {messages.length > 0 && (
           <div className="ai-chat-topbar">
             <button className="ai-new-chat-btn" onClick={handleNewChat} type="button">
@@ -374,8 +283,7 @@ const AIResearchPage = () => {
           </div>
         )}
 
-        {/* Messages */}
-        <div className="ai-thread">
+        <div className="ai-thread" ref={threadRef}>
           {isEmpty ? (
             <div className="ai-welcome">
               <div className="ai-welcome-icon">
@@ -401,7 +309,6 @@ const AIResearchPage = () => {
             <div className="ai-msg-list">
               {messageRows}
 
-              {/* Follow-up suggestions */}
               {showFollowUps && (
                 <div className="ai-followups">
                   {FOLLOW_UPS.map(f => (
@@ -429,27 +336,17 @@ const AIResearchPage = () => {
           )}
           {error && (
             <div className="ai-msg is-assistant">
-              <div className="ai-error-bubble">⚠ {error}</div>
+              <div className="ai-error-bubble">Something went wrong: {error}</div>
             </div>
           )}
           <div ref={endRef} />
         </div>
 
-        {/* Composer */}
         <form className="ai-composer" onSubmit={handleSubmit}>
           <div className="ai-composer-inner">
-            {contextSymbol && (
-              <div className="ai-context-row">
-                <span className="ai-context-label">CONTEXT:</span>
-                <span className="ai-context-chip">
-                  <Sparkles size={11} />
-                  {contextSymbol}
-                  <button className="ai-context-remove" type="button" onClick={() => setContextSymbol(null)}>
-                    <X size={10} />
-                  </button>
-                </span>
-              </div>
-            )}
+            <div className="ai-composer-scope-row">
+              <ScopeSelector scope={scope} onToggle={handleScopeToggle} onReset={handleScopeReset} />
+            </div>
             <div className="ai-composer-input-row">
               <button type="button" className="ai-attach-btn" title="Attach file">
                 <Paperclip size={16} />
@@ -460,7 +357,7 @@ const AIResearchPage = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a follow-up question or analyze another stock..."
+                placeholder="Ask about any stock — fundamentals, technicals, sentiment..."
                 disabled={loading}
               />
               <button type="submit" className="ai-send-btn" disabled={!canSend}>

@@ -435,6 +435,136 @@ async def get_stock_sentiment_endpoint(symbol: str):
 
 
 
+@router.get("/{symbol}/fundamentals", summary="Structured Fundamental Data")
+async def get_stock_fundamentals_endpoint(symbol: str):
+    """
+    Returns structured fundamental data (ratios, income, balance sheet, cash flow)
+    directly from yfinance tools -- no LLM involved. Used by dashboard pages.
+    """
+    from app.agent.tools.fundamental_ratios import get_fundamental_ratios
+    from app.agent.tools.fundamental_income import get_income_statement
+    from app.agent.tools.fundamental_balance_sheet import get_balance_sheet
+    from app.agent.tools.fundamental_cashflow import get_cashflow_statement
+
+    loop = asyncio.get_event_loop()
+
+    async def _run(fn, **kwargs):
+        try:
+            return await loop.run_in_executor(None, lambda: fn.invoke(kwargs))
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    ratios_t, income_t, bs_t, cf_t = await asyncio.gather(
+        _run(get_fundamental_ratios, symbol=symbol),
+        _run(get_income_statement, symbol=symbol, period="annual"),
+        _run(get_balance_sheet, symbol=symbol, period="annual"),
+        _run(get_cashflow_statement, symbol=symbol, period="annual"),
+    )
+
+    ratios_data = ratios_t.get("data", {}) if ratios_t.get("success") else {}
+    income_data = income_t if income_t.get("success") else {}
+    bs_data = bs_t if bs_t.get("success") else {}
+    cf_data = cf_t if cf_t.get("success") else {}
+
+    company = ratios_data.get("company_info", {})
+    valuation = ratios_data.get("valuation_ratios", {})
+    profitability = ratios_data.get("profitability_ratios", {})
+    liquidity = ratios_data.get("liquidity_ratios", {})
+    leverage = ratios_data.get("leverage_ratios", {})
+    dividends = ratios_data.get("dividend_metrics", {})
+    growth = ratios_data.get("growth_rates", {})
+    market = ratios_data.get("market_metrics", {})
+    per_share = ratios_data.get("per_share_metrics", {})
+    analyst = ratios_data.get("analyst_data", {})
+
+    def _safe_round(v, d=2):
+        if v is None:
+            return None
+        try:
+            return round(float(v), d)
+        except (TypeError, ValueError):
+            return None
+
+    def _safe_pct(v, d=2):
+        if v is None:
+            return None
+        try:
+            return round(float(v) * 100, d)
+        except (TypeError, ValueError):
+            return None
+
+    result = {
+        "success": True,
+        "symbol": symbol,
+        "company": {
+            "name": company.get("long_name"),
+            "sector": company.get("sector"),
+            "industry": company.get("industry"),
+            "country": company.get("country"),
+            "employees": company.get("full_time_employees"),
+            "description": company.get("long_business_summary", "")[:500],
+        },
+        "key_metrics": {
+            "market_cap": market.get("market_cap"),
+            "pe_ttm": _safe_round(valuation.get("trailing_pe")),
+            "pe_forward": _safe_round(valuation.get("forward_pe")),
+            "pb": _safe_round(valuation.get("price_to_book")),
+            "peg": _safe_round(valuation.get("peg_ratio")),
+            "ev_ebitda": _safe_round(valuation.get("enterprise_to_ebitda")),
+            "ps": _safe_round(valuation.get("price_to_sales_ttm")),
+            "roe": _safe_pct(profitability.get("return_on_equity")),
+            "roa": _safe_pct(profitability.get("return_on_assets")),
+            "gross_margin": _safe_pct(profitability.get("gross_margins")),
+            "operating_margin": _safe_pct(profitability.get("operating_margins")),
+            "net_margin": _safe_pct(profitability.get("profit_margins")),
+            "current_ratio": _safe_round(liquidity.get("current_ratio")),
+            "quick_ratio": _safe_round(liquidity.get("quick_ratio")),
+            "debt_to_equity": _safe_round(leverage.get("debt_to_equity")),
+            "interest_coverage": _safe_round(leverage.get("interest_coverage")),
+            "dividend_yield": _safe_pct(dividends.get("dividend_yield")),
+            "payout_ratio": _safe_pct(dividends.get("payout_ratio")),
+            "revenue_growth": _safe_pct(growth.get("revenue_growth")),
+            "earnings_growth": _safe_pct(growth.get("earnings_growth")),
+            "eps": _safe_round(per_share.get("trailing_eps")),
+            "book_value": _safe_round(per_share.get("book_value")),
+        },
+        "income_statement": {
+            "latest": income_data.get("income_statement", {}),
+            "historical": income_data.get("historical_data", {}),
+        },
+        "balance_sheet": {
+            "latest": bs_data.get("balance_sheet", {}),
+            "historical": bs_data.get("historical_data", {}),
+        },
+        "cash_flow": {
+            "latest": cf_data.get("cashflow", {}),
+            "historical": cf_data.get("historical_data", {}),
+        },
+        "analyst": analyst,
+    }
+
+    return result
+
+
+@router.get("/{symbol}/technical-summary", summary="Technical Indicator Summary")
+async def get_stock_technical_summary_endpoint(symbol: str):
+    """
+    Returns key technical indicators (RSI, MACD, SMA20/50/200, BBands)
+    directly from pandas_ta -- no LLM involved.
+    """
+    from app.services.technical_summary_service import get_technical_summary
+
+    try:
+        result = await get_technical_summary(symbol)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("error", "Unknown error"))
+
+    return result
+
+
 @router.get("/{symbol}/history", summary="Get Stock Price History")
 async def get_stock_history_endpoint(
     symbol: str,

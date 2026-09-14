@@ -23,34 +23,57 @@ def calculate_indicator(
         data_period: How much historical data to fetch (e.g., '1d', '5d', '1mo', '6mo', '1y')
         indicator_period: Lookback period for indicator calculation (default: 14)
     """
-      # 1. Download data from Yahoo Finance
-      ticker = yf.Ticker(symbol)
-      df = ticker.history(period=data_period, interval=interval)
+      try:
+          ticker = yf.Ticker(symbol)
+          df = ticker.history(period=data_period, interval=interval)
 
-      if df.empty:
+          if df.empty:
+              return {
+                  "error": f"No data available for {symbol} with period={data_period} and interval={interval}",
+                  "symbol": symbol,
+                  "indicator": indicator,
+                  "success": False,
+              }
+
+          indicator_func = getattr(df.ta, indicator.lower(), None)
+          if indicator_func is None:
+              return {
+                  "error": f"Unknown indicator '{indicator}'. Use rsi, macd, sma, ema, bbands, etc.",
+                  "symbol": symbol,
+                  "indicator": indicator,
+                  "success": False,
+              }
+
+          result = indicator_func(length=indicator_period, **kwargs)
+
+          if result is None or (hasattr(result, 'empty') and result.empty):
+              return {
+                  "error": f"Indicator '{indicator}' returned no data for {symbol}",
+                  "symbol": symbol,
+                  "indicator": indicator,
+                  "success": False,
+              }
+
+          if hasattr(result, 'columns') and len(result.columns) > 1:
+              current_value = {col: float(result[col].iloc[-1]) for col in result.columns}
+          else:
+              current_value = float(result.iloc[-1])
+
           return {
-              "error": f"No data available for {symbol} with period={data_period} and interval={interval}",
               "symbol": symbol,
-              "indicator": indicator
+              "indicator": indicator,
+              "current_value": current_value,
+              "timestamp": str(df.index[-1]),
+              "data_period": data_period,
+              "interval": interval,
+              "indicator_period": indicator_period,
+              "success": True,
           }
 
-      # 2. Dynamically call the indicator
-      indicator_func = getattr(df.ta, indicator.lower())
-      result = indicator_func(length=indicator_period, **kwargs)
-
-      # Handle multi-column results (like MACD, Bollinger Bands)
-      if hasattr(result, 'columns') and len(result.columns) > 1:
-          current_value = {col: float(result[col].iloc[-1]) for col in result.columns}
-      else:
-          current_value = float(result.iloc[-1])
-
-      # 3. Return the result
-      return {
-          "symbol": symbol,
-          "indicator": indicator,
-          "current_value": current_value,
-          "timestamp": str(df.index[-1]),
-          "data_period": data_period,
-          "interval": interval,
-          "indicator_period": indicator_period
-      }
+      except Exception as e:
+          return {
+              "symbol": symbol,
+              "indicator": indicator,
+              "error": str(e),
+              "success": False,
+          }

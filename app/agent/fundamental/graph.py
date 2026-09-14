@@ -140,7 +140,7 @@ def _build_fallback_report(symbol: str, state: FundamentalAnalysisState) -> str:
         info = data.get("company_info", {})
         if info.get("long_name"):
             parts += [
-                "\n## 🏢 Company Information",
+                "\n## Company Overview",
                 f"- **Name**: {info.get('long_name')}",
                 f"- **Sector**: {info.get('sector')}",
                 f"- **Industry**: {info.get('industry')}",
@@ -153,7 +153,7 @@ def _build_fallback_report(symbol: str, state: FundamentalAnalysisState) -> str:
         prof = data.get("profitability_ratios", {})
         liq = data.get("liquidity_ratios", {})
         lev = data.get("leverage_ratios", {})
-        parts.append("\n## 📊 Key Ratios")
+        parts.append("\n## Key Ratios")
         if val.get("trailing_pe"):
             parts.append(f"- PE Ratio (TTM): {val['trailing_pe']:.2f}")
         if val.get("forward_pe"):
@@ -171,7 +171,7 @@ def _build_fallback_report(symbol: str, state: FundamentalAnalysisState) -> str:
 
     if state.get("cashflow_analysis") and state["cashflow_analysis"].get("success"):
         cf = state["cashflow_analysis"]["cashflow"]
-        parts.append("\n## 💰 Cash Flow Analysis")
+        parts.append("\n## Cash Flow Analysis")
         if cf.get("operating_cash_flow"):
             parts.append(f"- Operating Cash Flow: ₹{cf['operating_cash_flow']:,.0f}")
         if cf.get("free_cash_flow"):
@@ -179,13 +179,13 @@ def _build_fallback_report(symbol: str, state: FundamentalAnalysisState) -> str:
 
     if state.get("balance_sheet_analysis") and state["balance_sheet_analysis"].get("success"):
         bs = state["balance_sheet_analysis"]["balance_sheet"]
-        parts.append("\n## 🏦 Balance Sheet")
+        parts.append("\n## Balance Sheet")
         if bs.get("total_assets"):
             parts.append(f"- Total Assets: ₹{bs['total_assets']:,.0f}")
 
     if state.get("pnl_analysis") and state["pnl_analysis"].get("success"):
         pnl = state["pnl_analysis"]["income_statement"]
-        parts.append("\n## 📈 Profit & Loss")
+        parts.append("\n## Profit & Loss")
         if pnl.get("total_revenue"):
             parts.append(f"- Total Revenue: ₹{pnl['total_revenue']:,.0f}")
         if pnl.get("net_income"):
@@ -205,44 +205,53 @@ def consolidator_agent(state: FundamentalAnalysisState) -> dict:
 
     extra_instruction = f"\nThe user specifically asked: {user_query}" if user_query else ""
 
-    prompt = f"""You are a senior equity research analyst specializing in Indian and global markets.
-You have been given comprehensive fundamental data for {symbol} collected from Yahoo Finance.
-Produce a detailed, professional investment analysis report in Markdown format.{extra_instruction}
+    prompt = f"""You are a senior equity research analyst. Produce a professional fundamental analysis report for {symbol} in clean Markdown.{extra_instruction}
 
-## DATA PROVIDED:
+DATA:
 ```json
 {json.dumps(ctx, indent=2, default=str)}
 ```
 
-## REPORT STRUCTURE (use exactly these section headers):
+REPORT STRUCTURE (use these exact section headers, no emojis):
 
-### ## 🏢 Company Information
-Summarize the company: name, sector, industry, country, employees, and a brief description of the business.
+## Company Overview
+Name, sector, industry, country, employees. One-line business description.
 
-### ## 📊 Key Ratios
-Analyse valuation (PE, PB, PEG, EV/EBITDA), profitability (ROE, ROA, margins), liquidity (current/quick ratio), and leverage (Debt/Equity). For each metric, state whether it looks attractive, fair, or stretched vs sector norms.
+## Key Ratios
 
-### ## 💰 Cash Flow Analysis
-Interpret operating cash flow, free cash flow, capex trends, and FCF/OCF conversion. Comment on cash generation quality and sustainability. Include YoY growth if data is available.
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| PE (TTM) | ... | Attractive / Fair / Stretched |
+| PB | ... | ... |
+| ROE | ... | ... |
+| Debt/Equity | ... | ... |
+| Current Ratio | ... | ... |
+| Net Margin | ... | ... |
 
-### ## 🏦 Balance Sheet
-Cover assets, liabilities, equity, working capital, and debt levels. Flag any concerns (high debt, negative equity, deteriorating current ratio).
+Add context vs sector norms where possible.
 
-### ## 📈 Profit & Loss
-Analyse revenue, gross profit, EBITDA, and net income. Highlight margin trends, revenue growth, and earnings quality.
+## Cash Flow Analysis
+Operating cash flow, free cash flow, capex, FCF/OCF conversion. YoY trends if available. One sentence on cash generation quality.
 
-### ## 🔍 Investment Insights
-Provide a concise investment thesis (3–5 bullets):
-- Key strengths
-- Key risks / red flags
-- Overall verdict (Strong Buy / Buy / Hold / Avoid) with a one-line rationale
-- Analyst consensus (if available in the data)
+## Balance Sheet
+Assets, liabilities, equity, working capital, debt levels. Flag concerns clearly.
 
-Rules:
-- Use ₹ for Indian stocks (suffix .NS or .BO), $ for US stocks.
-- Format large numbers as Cr (crore) for Indian stocks if > 10,000,000, or B/M for US stocks.
-- Do NOT make up data not present in the provided JSON. If a metric is missing, say "Not available."
-- Be direct and opinionated — avoid generic filler text."""
+## Profit & Loss
+Revenue, gross profit, EBITDA, net income. Margin trends and revenue growth.
+
+## Investment Verdict
+- Verdict: Strong Buy / Buy / Hold / Sell / Avoid
+- 3-4 key strengths (bullet points)
+- 2-3 key risks (bullet points)
+- Analyst consensus summary (if available)
+- One-line rationale
+
+RULES:
+- No emojis anywhere in the output.
+- Use ₹ for Indian stocks (.NS/.BO suffix), $ for US stocks.
+- Format large numbers as Cr for Indian stocks (> 1,00,00,000), B/M for US stocks.
+- Never fabricate data. If a metric is missing, state "Not available."
+- Be direct and opinionated. No filler text."""
 
     try:
         os.environ["ANTHROPIC_API_KEY"] = settings.ANTHROPIC_API_KEY

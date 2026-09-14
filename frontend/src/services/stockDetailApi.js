@@ -22,3 +22,9 @@ export const compareStocks = (symbols) =>
 
 export const searchStocks = (q) =>
   axios.get(`${BASE}/search`, { params: { q, limit: 10 } }).then(r => r.data);
+
+export const getStockFundamentals = (symbol) =>
+  axios.get(`${BASE}/${encodeURIComponent(symbol)}/fundamentals`).then(r => r.data);
+
+export const getStockTechnicalSummary = (symbol) =>
+  axios.get(`${BASE}/${encodeURIComponent(symbol)}/technical-summary`).then(r => r.data);
